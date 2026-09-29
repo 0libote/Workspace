@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Astryx Workspace",
+  "short_name": "Astryx",
+  "description": "A self-hosted workspace for connected work.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f5f2",
+  "theme_color": "#f6f5f2",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

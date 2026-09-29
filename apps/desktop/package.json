@@ -1,0 +1,13 @@
+{
+  "name": "@workspace/desktop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "electrobun dev --watch",
+    "build": "electrobun build --env=canary",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "electrobun": "2.0.1"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/editor",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
+  "dependencies": {
+    "@blocknote/ariakit": "0.54.0",
+    "@blocknote/core": "0.54.0",
+    "@blocknote/react": "0.54.0",
+    "@workspace/domain": "workspace:*"
+  }
+}

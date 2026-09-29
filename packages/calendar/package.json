@@ -1,0 +1,17 @@
+{
+  "name": "@workspace/calendar",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@workspace/domain": "workspace:*",
+    "@workspace/platform": "workspace:*"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./view": "./src/CalendarView.tsx"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  }
+}

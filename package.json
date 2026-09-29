@@ -1,0 +1,27 @@
+{
+  "name": "node-workspace",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "PORT=3190 APP_URL=http://127.0.0.1:4173 bun run --parallel --filter '@workspace/{web,server}' dev",
+    "start": "bun apps/server/src/index.ts",
+    "db:migrate": "bun apps/server/src/migrate.ts",
+    "test": "bun test --path-ignore-patterns='**/e2e/**'",
+    "test:integration": "APP_URL=http://127.0.0.1:3190 bun test --timeout=30000 packages/db/src/database.integration.test.ts apps/server/src/api.integration.test.ts apps/server/src/sync.integration.test.ts",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "desktop:typecheck": "bun run --cwd apps/desktop typecheck",
+    "desktop:dev": "bun run --cwd apps/desktop dev",
+    "desktop:build": "bun run --cwd apps/desktop build",
+    "build": "bun build apps/server/src/index.ts --target=bun --outdir=dist/server && bun run --filter @workspace/web build"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/bun": "^1.2.5",
+    "typescript": "^5.8.3",
+    "vite": "^8.3.1"
+  }
+}

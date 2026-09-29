@@ -1,0 +1,24 @@
+{
+  "name": "@workspace/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4173",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@tanstack/react-virtual": "3.14.9",
+    "@workspace/domain": "workspace:*",
+    "@workspace/calendar": "workspace:*",
+    "@workspace/canvas": "workspace:*",
+    "@workspace/editor": "workspace:*",
+    "@workspace/platform": "workspace:*",
+    "@workspace/ui": "workspace:*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
+  }
+}

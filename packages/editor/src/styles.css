@@ -1,0 +1,24 @@
+@import "@blocknote/core/fonts/inter.css";
+@import "@blocknote/ariakit/style.css";
+
+.workspace-page-editor.bn-container {
+  min-height: 340px;
+  overflow: visible;
+  border: 1px solid #e9e7df;
+  border-radius: 13px;
+  background: #fcfbf8 !important;
+  color: var(--color-text-primary, #34362f);
+}
+
+.workspace-page-editor .bn-root,
+.workspace-page-editor .bn-editor {
+  background: transparent !important;
+}
+
+.workspace-page-editor .bn-editor {
+  min-height: 310px;
+  padding: 24px clamp(16px, 4vw, 42px) 48px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.75;
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/canvas",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./view": "./src/CanvasView.tsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "0.18.0",
+    "@workspace/domain": "workspace:*",
+    "@workspace/ui": "workspace:*"
+  }
+}

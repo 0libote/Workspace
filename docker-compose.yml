@@ -1,0 +1,42 @@
+services:
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-3000}}
+      DATABASE_URL: postgres://${POSTGRES_USER:-workspace}:${POSTGRES_PASSWORD:-workspace-dev-only}@postgres:5432/${POSTGRES_DB:-workspace}
+      PORT: 3000
+      WEB_DIST_DIR: /app/apps/web/dist
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "const response = await fetch('http://127.0.0.1:3000/ready'); if (!response.ok) process.exit(1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-workspace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workspace-dev-only}
+      POSTGRES_DB: ${POSTGRES_DB:-workspace}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres-data:

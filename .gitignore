@@ -1,0 +1,13 @@
+node_modules/
+bun.lockb
+dist/
+apps/desktop/build/
+apps/desktop/artifacts/
+.hutch/
+.cottontail-tmp/
+.env
+data/
+backups/
+coverage/
+test-results/
+playwright-report/
