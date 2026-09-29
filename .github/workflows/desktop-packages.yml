@@ -1,0 +1,48 @@
+name: Desktop packages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x64
+          - runner: macos-14
+            target: macos-arm64
+          - runner: windows-2025
+            target: win-x64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Prepare Electrobun SDK
+        run: bunx electrobun sync
+        working-directory: apps/desktop
+
+      - name: Build desktop package and installer
+        run: bun run desktop:build
+
+      - name: Upload desktop package and installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: astryx-desktop-${{ matrix.target }}-${{ github.sha }}
+          path: apps/desktop/artifacts/*
+          if-no-files-found: error
+          retention-days: 14
