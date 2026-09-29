@@ -303,9 +303,12 @@ test("sign in and create a node through the workspace interface", async ({ page 
   await page.getByRole("button", { name: "Load more collection items" }).click();
   const virtualBoard = page.getByRole("list", { name: "task collection items" });
   expect(await virtualBoard.getByRole("listitem").count()).toBeLessThan(50);
-  const virtualBoardScroll = page.locator(".collection-virtual-scroll");
-  await virtualBoardScroll.evaluate((element) => element.scrollTo({ top: element.scrollHeight, behavior: "instant" }));
-  await expect(virtualBoard.getByText(`${virtualPrefix}000`, { exact: true })).toBeVisible();
+  const firstVirtualBoardItem = virtualBoard.getByText(`${virtualPrefix}000`, { exact: true });
+  await expect.poll(async () => {
+    await virtualBoard.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    return firstVirtualBoardItem.count();
+  }).toBe(1);
+  await expect(firstVirtualBoardItem).toBeVisible();
   await page.getByRole("button", { name: "Back to items" }).click();
 
   await item.getByRole("button", { name: "Open task" }).click();
