@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { resolve } from "node:path";
 import type { NodeId, WorkspaceId } from "../packages/domain/src/index";
 import type { SyncUpdateMessage } from "../packages/sync/src/index";
 
 test("IndexedDB sync queue survives a tab instance and removes only acknowledged updates", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  const result = await page.evaluate(async () => {
-    const sourceModule = "/@fs/home/oliver/Workspace/packages/sync/src/index.ts";
+  const sourceModule = `/@fs${resolve(process.cwd(), "packages/sync/src/index.ts")}`;
+  const result = await page.evaluate(async (sourceModule) => {
     const { IndexedDbSyncDocumentStorage, IndexedDbSyncMutationStorage, OfflineSyncQueue, createSyncDocument, encodeSyncDocumentState } = await import(/* @vite-ignore */ sourceModule);
     const databaseName = `sync-queue-e2e-${crypto.randomUUID()}`;
     const first = new OfflineSyncQueue(new IndexedDbSyncMutationStorage(databaseName));
@@ -33,7 +34,7 @@ test("IndexedDB sync queue survives a tab instance and removes only acknowledged
     const cleared = await cacheOne.load(message.workspaceId, message.nodeId, "page");
     document.destroy();
     return { queuedId: before[0]?.message.mutationId, flushed, remaining: await first.pending(message.workspaceId, message.nodeId), cacheRestored: restoredState !== null && Array.from(restoredState).join(",") === Array.from(state).join(","), cacheCleared: cleared === null };
-  });
+  }, sourceModule);
   expect(result.queuedId).toBeTruthy();
   expect(result.flushed).toEqual({ acknowledged: 1, remaining: 0 });
   expect(result.remaining).toEqual([]);
@@ -69,10 +70,11 @@ test("authenticated browser websocket persists and serves Yjs updates", async ({
     if (!created.ok) throw new Error("Could not create a page for sync test");
     return { workspaceId, nodeId: (await created.json() as { id: string }).id };
   });
-  const result = await page.evaluate(async ({ workspaceId, nodeId }) => {
+  const sourceModule = `/@fs${resolve(process.cwd(), "packages/sync/src/index.ts")}`;
+  const result = await page.evaluate(async ({ workspaceId, nodeId, sourceModule }) => {
     const url = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/api/sync/${workspaceId}/${nodeId}/page`;
     const loadModule = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<Record<string, unknown>>;
-    const syncModule = await loadModule("/@fs/home/oliver/Workspace/packages/sync/src/index.ts") as {
+    const syncModule = await loadModule(sourceModule) as {
       IndexedDbSyncDocumentStorage: new (name: string) => { load(workspace: string, node: string, kind: "page" | "canvas"): Promise<Uint8Array | null> };
       IndexedDbSyncMutationStorage: new (name: string) => unknown;
       OfflineSyncQueue: new (storage: unknown) => { pending(workspace: string, node: string): Promise<readonly unknown[]> };
@@ -124,7 +126,7 @@ test("authenticated browser websocket persists and serves Yjs updates", async ({
     second.close(); connectionRef[0]?.close();
     document.destroy(); recoveredDoc.destroy(); cachedDoc.destroy();
     return { queuedAfterAck, recoveredRevision: recovered.serverRevision, recoveredValue, cachedValue };
-  }, scope);
+  }, { ...scope, sourceModule });
   expect(result.queuedAfterAck).toBe(0);
   expect(result.recoveredRevision).toBe(1);
   expect(result.recoveredValue).toBe("real");

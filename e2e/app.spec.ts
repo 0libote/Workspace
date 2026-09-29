@@ -288,8 +288,12 @@ test("sign in and create a node through the workspace interface", async ({ page 
   await page.getByRole("button", { name: "Load more collection items" }).click();
   expect(await virtualList.getByRole("listitem").count()).toBeLessThan(50);
   const virtualListScroll = page.locator(".collection-virtual-scroll");
-  await virtualListScroll.evaluate((element) => element.scrollTo({ top: element.scrollHeight, behavior: "instant" }));
-  await expect(virtualList.getByText(`${virtualPrefix}000`, { exact: true })).toBeVisible();
+  const lastVirtualListItem = virtualList.getByText(`${virtualPrefix}000`, { exact: true });
+  await expect.poll(async () => {
+    await virtualListScroll.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    return lastVirtualListItem.count();
+  }).toBe(1);
+  await expect(lastVirtualListItem).toBeVisible();
   await page.getByRole("button", { name: "Back to items" }).click();
   await page.getByRole("button", { name: `Edit collection: ${virtualName}` }).click();
   const editVirtualBoard = page.getByRole("dialog", { name: "Edit collection" });
