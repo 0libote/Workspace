@@ -33,7 +33,7 @@ export interface WebPlatformRuntime {
   readonly URL: Pick<typeof URL, "createObjectURL" | "revokeObjectURL">;
   readonly Blob: typeof Blob;
   readonly Notification?: typeof Notification;
-  readonly window: Pick<Window, "open">;
+  readonly window: Pick<Window, "open" | "focus">;
   readonly setTimeout?: typeof setTimeout;
 }
 
@@ -123,7 +123,8 @@ export function createWebPlatform(runtime: WebPlatformRuntime = globalThis as un
       const notification = runtime.Notification;
       if (!notification) return "unavailable";
       if (notification.permission !== "granted") return "permission_required";
-      new notification(title, { body });
+      const instance = new notification(title, { body });
+      instance.onclick = () => runtime.window.focus();
       return "shown";
     },
   };

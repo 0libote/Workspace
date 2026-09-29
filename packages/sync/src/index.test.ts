@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { decodeSyncBytes, encodeSyncBytes, OfflineSyncQueue, parseSyncClientMessage, parseSyncServerMessage, SyncConnection, validateSyncClientMessage, type QueuedSyncMutation, type SyncMutationStorage, type SyncWebSocketLike } from "./index";
+import { decodeSyncBytes, encodeSyncBytes, OfflineSyncQueue, parseSyncClientMessage, parseSyncServerMessage, SyncConnection, validateSyncClientMessage, type QueuedSyncMutation, type SyncDocumentCache, type SyncMutationStorage, type SyncWebSocketLike } from "./index";
 import type { NodeId, WorkspaceId } from "@workspace/domain";
 import * as Y from "yjs";
 
@@ -41,6 +41,12 @@ class MemoryStorage implements SyncMutationStorage {
   async remove(id: string) { this.values.delete(id); }
 }
 
+const memoryDocumentCache: SyncDocumentCache = {
+  async load() { return null; },
+  async save() {},
+  async clear() {},
+};
+
 class FakeSocket implements SyncWebSocketLike {
   readyState = 0;
   onopen: (() => void) | null = null;
@@ -59,7 +65,7 @@ test("SyncConnection applies remote Yjs state and removes local queued updates o
   const storage = new MemoryStorage();
   const socket = new FakeSocket();
   const statuses: string[] = [];
-  const connection = new SyncConnection({
+  const connection = await SyncConnection.open({
     url: "ws://localhost/api/sync/test",
     workspaceId,
     nodeId,
@@ -68,6 +74,7 @@ test("SyncConnection applies remote Yjs state and removes local queued updates o
     queue: new OfflineSyncQueue(storage),
     createWebSocket: () => socket,
     onStatus: (status) => statuses.push(status),
+    documentCache: memoryDocumentCache,
   });
   socket.open();
   expect(JSON.parse(socket.sent[0]!).kind).toBe("join");
@@ -97,7 +104,7 @@ test("SyncConnection applies remote Yjs state and removes local queued updates o
 test("SyncConnection reconnects with backoff after a closed socket", async () => {
   const sockets: FakeSocket[] = [];
   const document = new Y.Doc();
-  const connection = new SyncConnection({
+  const connection = await SyncConnection.open({
     url: "ws://localhost/api/sync/test",
     workspaceId,
     nodeId,
@@ -107,6 +114,7 @@ test("SyncConnection reconnects with backoff after a closed socket", async () =>
     createWebSocket: () => { const socket = new FakeSocket(); sockets.push(socket); return socket; },
     minimumReconnectDelayMs: 1,
     maximumReconnectDelayMs: 4,
+    documentCache: memoryDocumentCache,
   });
   sockets[0]!.open();
   sockets[0]!.close();

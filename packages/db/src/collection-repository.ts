@@ -1,8 +1,6 @@
 import {
   validateCollectionQuery,
   validateCollectionView,
-  type CollectionQuery,
-  type CollectionViewConfiguration,
   type SavedCollection,
   type SavedCollectionId,
   type SavedCollectionRepository,
@@ -99,4 +97,4 @@ export class PostgresSavedCollectionRepository implements SavedCollectionReposit
   }
 }
 
-export type { CollectionQuery, CollectionViewConfiguration };
+export type { CollectionQuery, CollectionViewConfiguration } from "@workspace/domain";

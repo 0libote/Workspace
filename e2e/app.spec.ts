@@ -141,7 +141,7 @@ test("sign in and create a node through the workspace interface", async ({ page 
   }, nextDate);
   const dragTargetLabel = await page.evaluate((date) => new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeZone: "UTC" }).format(new Date(`${date}T00:00:00.000Z`)), dragTargetDate);
   const movedByDrop = page.waitForResponse((response) => response.url().includes(`/api/calendar/${scheduledNodeId}/move?`) && response.request().method() === "PATCH", { timeout: 10_000 });
-  await page.getByRole("button", { name: title }).dragTo(page.getByRole("gridcell", { name: dragTargetLabel }), { targetPosition: { x: 30, y: 70 }, steps: 8 });
+  await page.getByRole("button", { name: title }).dragTo(page.getByRole("group", { name: dragTargetLabel }), { targetPosition: { x: 30, y: 70 }, steps: 8 });
   expect((await movedByDrop).status()).toBe(200);
   await expect(moveDateField).toHaveValue(dragTargetDate);
   calendarMovedDate = dragTargetDate;

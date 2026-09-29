@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AppButton } from "@workspace/ui";
 import { formatInstantInTimeZone } from "@workspace/calendar";
+import { ModalDialog } from "./ModalDialog";
+import { formString } from "./form-data";
 import { apiRequest, type NodeProperty, type NodeRelation, type PropertyDefinition, type RelationDefinition, type WorkspaceNode } from "./api";
 
 export function NodeRelationsPanel({
@@ -48,7 +50,7 @@ export function NodeRelationsPanel({
     return () => controller.abort();
   }, [node.id, workspaceId]);
 
-  const relatedNodeIds = [...new Set([...outgoing.map(({ toNodeId }) => toNodeId), ...incoming.map(({ fromNodeId }) => fromNodeId)])].sort();
+  const relatedNodeIds = [...new Set([...outgoing.map(({ toNodeId }) => toNodeId), ...incoming.map(({ fromNodeId }) => fromNodeId)])].sort((left, right) => left.localeCompare(right));
   const relatedNodeIdsKey = relatedNodeIds.join(",");
   useEffect(() => {
     if (!relatedNodeIdsKey) { setScheduleByNodeId({}); return; }
@@ -72,7 +74,11 @@ export function NodeRelationsPanel({
         };
         const startText = formatValue(start);
         const dueText = formatValue(due);
-        if (startText || dueText) next[id] = `${startText ? `Starts ${startText}` : "Scheduled"}${dueText ? ` · due ${dueText}` : ""}`;
+        if (startText || dueText) {
+          const startLabel = startText ? `Starts ${startText}` : "Scheduled";
+          const dueLabel = dueText ? ` · due ${dueText}` : "";
+          next[id] = `${startLabel}${dueLabel}`;
+        }
       });
       setScheduleByNodeId(next);
     }).catch(() => { if (active) setScheduleByNodeId({}); });
@@ -87,9 +93,9 @@ export function NodeRelationsPanel({
     event.preventDefault();
     if (!editable || saving) return;
     const form = new FormData(event.currentTarget);
-    const type = String(form.get("type") ?? "").trim().toLowerCase().replace(/\s+/g, "-");
-    const fromLabel = String(form.get("fromLabel") ?? "").trim();
-    const toLabel = String(form.get("toLabel") ?? "").trim();
+    const type = formString(form, "type").trim().toLowerCase().replace(/\s+/g, "-");
+    const fromLabel = formString(form, "fromLabel").trim();
+    const toLabel = formString(form, "toLabel").trim();
     setSaving(true);
     setError("");
     try {
@@ -112,8 +118,8 @@ export function NodeRelationsPanel({
     if (!editable || saving) return;
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
-    const toNodeId = String(form.get("toNodeId") ?? "");
-    const type = String(form.get("type") ?? "");
+    const toNodeId = formString(form, "toNodeId");
+    const type = formString(form, "type");
     if (!toNodeId || !type) return;
     setSaving(true);
     setError("");
@@ -154,6 +160,6 @@ export function NodeRelationsPanel({
         })}
       </ul>}
     </>}
-    {definitionDialog && <div className="workspace-dialog-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setDefinitionDialog(false); }}><section className="workspace-dialog" role="dialog" aria-modal="true" aria-labelledby={`connection-dialog-title-${node.id}`}><div className="eyebrow">WORKSPACE RELATION</div><h2 id={`connection-dialog-title-${node.id}`}>Add a connection type</h2><form onSubmit={(event) => void createDefinition(event)}><label htmlFor={`relation-type-${node.id}`}>Type key</label><input id={`relation-type-${node.id}`} name="type" required maxLength={80} pattern="[a-zA-Z][a-zA-Z0-9 _-]*" placeholder="e.g. supports" /><label htmlFor={`relation-from-${node.id}`}>Label from this item</label><input id={`relation-from-${node.id}`} name="fromLabel" required maxLength={120} placeholder="e.g. supports" /><label htmlFor={`relation-to-${node.id}`}>Inverse label</label><input id={`relation-to-${node.id}`} name="toLabel" required maxLength={120} placeholder="e.g. is supported by" />{error && <p className="notice" role="alert">{error}</p>}<div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setDefinitionDialog(false)} /><AppButton label="Add connection type" variant="primary" type="submit" isLoading={saving} /></div></form></section></div>}
+    {definitionDialog && <ModalDialog titleId={`connection-dialog-title-${node.id}`} className="workspace-dialog" onClose={() => setDefinitionDialog(false)}><div className="eyebrow">WORKSPACE RELATION</div><h2 id={`connection-dialog-title-${node.id}`}>Add a connection type</h2><form onSubmit={(event) => void createDefinition(event)}><label htmlFor={`relation-type-${node.id}`}>Type key</label><input id={`relation-type-${node.id}`} name="type" required maxLength={80} pattern="[a-zA-Z][a-zA-Z0-9 _-]*" placeholder="e.g. supports" /><label htmlFor={`relation-from-${node.id}`}>Label from this item</label><input id={`relation-from-${node.id}`} name="fromLabel" required maxLength={120} placeholder="e.g. supports" /><label htmlFor={`relation-to-${node.id}`}>Inverse label</label><input id={`relation-to-${node.id}`} name="toLabel" required maxLength={120} placeholder="e.g. is supported by" />{error && <p className="notice" role="alert">{error}</p>}<div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setDefinitionDialog(false)} /><AppButton label="Add connection type" variant="primary" type="submit" isLoading={saving} /></div></form></ModalDialog>}
   </section>;
 }

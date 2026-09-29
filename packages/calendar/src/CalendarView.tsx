@@ -9,6 +9,11 @@ function dateKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
+function formString(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value : "";
+}
+
 function addDays(date: Date, count: number): Date {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + count);
@@ -183,8 +188,8 @@ export function CalendarView({ workspaceId, timeZone, csrfToken, editable, colle
     <form className="calendar-range-form" aria-label="Filter calendar date range" onSubmit={(event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
-      const fromDate = String(form.get("from") ?? "");
-      const toDate = String(form.get("to") ?? "");
+      const fromDate = formString(form, "from");
+      const toDate = formString(form, "to");
       const span = (Date.parse(`${toDate}T00:00:00Z`) - Date.parse(`${fromDate}T00:00:00Z`)) / 86_400_000;
       if (!isCalendarDate(fromDate) || !isCalendarDate(toDate) || !Number.isInteger(span) || span < 0 || span > 62) {
         setError("Choose a valid date range of up to 63 days.");
@@ -202,12 +207,12 @@ export function CalendarView({ workspaceId, timeZone, csrfToken, editable, colle
     </form>
     <p className="calendar-zone">Times shown in {timeZone}{loading ? " · Loading…" : ""}</p>
     {error && <p className="notice" role="status">{error}</p>}
-    <div className={`calendar-grid calendar-grid-${mode}`} role="grid" aria-label={`${mode} calendar dates`}>
-      {mode === "month" && ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((weekday) => <div className="calendar-weekday" role="columnheader" key={weekday}>{weekday}</div>)}
+    <div className={`calendar-grid calendar-grid-${mode}`}>
+      {mode === "month" && ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((weekday) => <div className="calendar-weekday" key={weekday}>{weekday}</div>)}
       {days.map((day) => {
         const key = dateKey(day);
         const dayEvents = eventsByDate.get(key) ?? [];
-        return <section className="calendar-day" role="gridcell" aria-label={new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeZone: "UTC" }).format(day)} key={key}
+        return <section className="calendar-day" role="group" aria-label={new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeZone: "UTC" }).format(day)} key={key}
           onDragOver={(event) => { if (editable) event.preventDefault(); }}
           onDrop={(event) => { event.preventDefault(); const nodeId = event.dataTransfer.getData("text/plain"); if (editable && nodeId) void moveNode(nodeId, key); }}>
           <h3>{mode === "month" ? day.getUTCDate() : new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" }).format(day)}</h3>

@@ -8,6 +8,14 @@ export type MembershipRole = "owner" | "editor" | "viewer";
 
 export type NodeType = string & { readonly __brand: "NodeType" };
 
+function isValidEmailAddress(value: string): boolean {
+  const separator = value.indexOf("@");
+  if (separator <= 0 || separator !== value.lastIndexOf("@") || /\s/.test(value)) return false;
+  const domain = value.slice(separator + 1);
+  const lastDot = domain.lastIndexOf(".");
+  return lastDot > 0 && lastDot < domain.length - 1;
+}
+
 export interface Workspace {
   readonly id: WorkspaceId;
   readonly name: string;
@@ -483,7 +491,7 @@ export interface CreateUserInput {
 export function createUser(input: CreateUserInput): User {
   const email = input.email.trim().toLowerCase();
   const displayName = input.displayName.trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !displayName) {
+  if (!isValidEmailAddress(email) || !displayName) {
     throw new DomainError("invalid_user", "A user requires a valid email address and non-empty display name.");
   }
   if (!isValidTimestamp(input.now)) throw new DomainError("invalid_timestamp", "The user timestamp must be a valid date-time.");
@@ -805,13 +813,13 @@ export function validatePropertyValue(definition: PropertyDefinition, value: unk
   if (value.type === "url") {
     try {
       const parsed = new URL(value.value);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("Unsupported URL protocol.");
     } catch {
       throw new DomainError("invalid_property_value", `Property ${definition.name} must be an absolute HTTP or HTTPS URL.`);
     }
   }
 
-  if (value.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.value)) {
+  if (value.type === "email" && !isValidEmailAddress(value.value)) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} must contain a valid email address.`);
   }
 }

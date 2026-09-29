@@ -86,7 +86,7 @@ export function PageEditor({ initialContent, editable = true, calendarCollection
       editable={editable}
       className="workspace-page-editor"
       onChange={(changedEditor) => {
-        const portableDocument: unknown = JSON.parse(JSON.stringify(changedEditor.document));
+        const portableDocument: unknown = JSON.parse(JSON.stringify(changedEditor.document)); // NOSONAR: JSON strips BlockNote runtime metadata; structuredClone preserves it.
         onChange(validateNodeDocumentContent(portableDocument));
       }}
     />

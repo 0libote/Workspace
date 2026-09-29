@@ -6,8 +6,10 @@ export interface QueuedSyncMutation {
   readonly attempts: number;
 }
 
+export type MutationInsertResult = "inserted" | "same" | "conflict";
+
 export interface SyncMutationStorage {
-  insertIfAbsent(mutation: QueuedSyncMutation): Promise<"inserted" | "same" | "conflict">;
+  insertIfAbsent(mutation: QueuedSyncMutation): Promise<MutationInsertResult>;
   list(workspaceId: string, nodeId: string): Promise<readonly QueuedSyncMutation[]>;
   markAttempt(mutationId: string): Promise<void>;
   remove(mutationId: string): Promise<void>;

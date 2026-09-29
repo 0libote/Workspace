@@ -4,13 +4,14 @@ import { AppButton, AppTheme } from "@workspace/ui";
 import { getPlatform } from "@workspace/platform";
 import { apiRequest, ApiError, type NodePage, type NodeProperty, type NodeSearchPage, type PageDocument, type PropertyDefinition, type SavedCollection, type Session, type TaskStatusDefinition, type WorkspaceNode, type WorkspaceSummary } from "./api";
 import { NodeRelationsPanel } from "./NodeRelationsPanel";
+import { ModalDialog } from "./ModalDialog";
+import { formString } from "./form-data";
 import { CollectionDetail } from "./CollectionDetail";
 import { GraphView } from "./GraphView";
 import { CalendarView } from "@workspace/calendar/view";
 const CanvasView = lazy(() => import("@workspace/canvas/view").then(({ CanvasView }) => ({ default: CanvasView })));
 import { formatInstantInTimeZone, resolveLocalDateTime } from "@workspace/calendar";
-import type { WorkspaceExport } from "@workspace/domain";
-import { validateNodeDocumentContent, type JsonValue, type PropertyValue } from "@workspace/domain";
+import { validateNodeDocumentContent, type JsonValue, type PropertyValue, type WorkspaceExport } from "@workspace/domain";
 import "@workspace/ui/styles.css";
 import "./styles.css";
 
@@ -310,7 +311,7 @@ function App() {
     event.preventDefault();
     if (!session || !workspaceId) return;
     const form = new FormData(event.currentTarget);
-    const layout = String(form.get("layout") ?? "table") as "table" | "list" | "board" | "calendar";
+    const layout = formString(form, "layout", "table") as "table" | "list" | "board" | "calendar";
     const columns = ["title", ...form.getAll("columns").map(String)];
     try {
       const collection = await apiRequest<SavedCollection>(collectionBeingEdited
@@ -580,8 +581,7 @@ function App() {
           </>}
         </div>
       </main>
-      {workspaceDialogOpen && <div className="workspace-dialog-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setWorkspaceDialogOpen(false); }}>
-        <section className="workspace-dialog" role="dialog" aria-modal="true" aria-labelledby="workspace-dialog-title">
+      {workspaceDialogOpen && <ModalDialog titleId="workspace-dialog-title" className="workspace-dialog" onClose={() => setWorkspaceDialogOpen(false)}>
           <div className="eyebrow">YOUR SPACE</div><h2 id="workspace-dialog-title">Create a workspace</h2>
           <form onSubmit={(event) => void createWorkspace(event)}>
             <label htmlFor="new-workspace-name">Workspace name</label>
@@ -591,10 +591,8 @@ function App() {
             {notice && <p className="notice" role="alert">{notice}</p>}
             <div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setWorkspaceDialogOpen(false)} /><AppButton label="Create workspace" variant="primary" type="submit" /></div>
           </form>
-        </section>
-      </div>}
-      {workspaceSettingsOpen && activeWorkspace && <div className="workspace-dialog-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setWorkspaceSettingsOpen(false); }}>
-        <section className="workspace-dialog" role="dialog" aria-modal="true" aria-labelledby="workspace-settings-title">
+      </ModalDialog>}
+      {workspaceSettingsOpen && activeWorkspace && <ModalDialog titleId="workspace-settings-title" className="workspace-dialog" onClose={() => setWorkspaceSettingsOpen(false)}>
           <div className="eyebrow">WORKSPACE SETTINGS</div><h2 id="workspace-settings-title">Time zone</h2>
           <form onSubmit={(event) => void saveWorkspaceSettings(event)}>
             <label htmlFor="workspace-time-zone">IANA time zone</label>
@@ -603,14 +601,12 @@ function App() {
             {notice && <p className="notice" role="alert">{notice}</p>}
             <div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setWorkspaceSettingsOpen(false)} /><AppButton label="Save time zone" variant="primary" type="submit" isLoading={savingWorkspaceSettings} /></div>
           </form>
-        </section>
-      </div>}
-      {collectionDialogOpen && <div className="workspace-dialog-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) setCollectionDialogOpen(false); }}>
-        <section className="workspace-dialog collection-dialog" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
+      </ModalDialog>}
+      {collectionDialogOpen && <ModalDialog titleId="collection-dialog-title" className="workspace-dialog collection-dialog" onClose={() => setCollectionDialogOpen(false)}>
           <div className="eyebrow">SAVED NODE VIEW</div><h2 id="collection-dialog-title">{collectionBeingEdited ? "Edit collection" : "Create a collection"}</h2>
           <form onSubmit={(event) => void createCollection(event)}>
             <label htmlFor="collection-name">Name</label><input autoFocus id="collection-name" name="name" required maxLength={120} placeholder="e.g. Active projects" defaultValue={collectionBeingEdited?.name ?? ""} />
-            <label>Filter by item type</label><div className="collection-filter-types">{[...new Set([...nodes.map(({ type }) => type), ...(collectionBeingEdited?.query.types ?? [])])].map((type) => <label key={type}><input type="checkbox" name="types" value={type} defaultChecked={collectionBeingEdited?.query.types.includes(type) ?? false} />{type}</label>)}</div>
+            <fieldset className="collection-type-filter"><legend>Filter by item type</legend><div className="collection-filter-types">{[...new Set([...nodes.map(({ type }) => type), ...(collectionBeingEdited?.query.types ?? [])])].map((type) => <label key={type}><input type="checkbox" name="types" value={type} defaultChecked={collectionBeingEdited?.query.types.includes(type) ?? false} />{type}</label>)}</div></fieldset>
             <label htmlFor="collection-title-filter">Title contains</label><input id="collection-title-filter" name="titleContains" maxLength={120} placeholder="Optional words in the title" defaultValue={collectionBeingEdited?.query.titleContains ?? ""} />
             <fieldset className="collection-columns"><legend>Columns</legend><p>Title is always included.</p><div className="collection-filter-types">
               <label><input type="checkbox" name="columns" value="type" defaultChecked={!collectionBeingEdited || collectionBeingEdited.view.columns.includes("type")} />Type</label>
@@ -624,8 +620,7 @@ function App() {
             {notice && <p className="notice" role="alert">{notice}</p>}
             <div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => { setCollectionDialogOpen(false); setCollectionBeingEdited(null); }} /><AppButton label={collectionBeingEdited ? "Save changes" : "Create collection"} variant="primary" type="submit" /></div>
           </form>
-        </section>
-      </div>}
+      </ModalDialog>}
     </div>
   );
 }
@@ -809,7 +804,7 @@ function PageDetail({
         renderCalendar={(collectionId) => <CalendarView workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} collectionId={collectionId} onOpenNode={onOpenNode} />}
         onChange={queueSave}
         onExportMarkdown={(markdown) => {
-          const filename = node.title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "page";
+          const filename = node.title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+/g, "").replace(/-+$/g, "").slice(0, 80) || "page";
           void getPlatform().saveFile(`${filename}.md`, markdown, "text/markdown; charset=utf-8");
         }}
       /></Suspense> : <p className="loading document-loading" role="status">Opening your page…</p>}
@@ -868,7 +863,7 @@ function TaskDetail({
       setError("Duration must be zero or more.");
       return;
     }
-    const existing = properties.find((property) => property.definitionId === definition.id);
+    const existing = properties.some((property) => property.definitionId === definition.id);
     setSavingId(definition.id);
     setError("");
     setSaved("");
@@ -901,9 +896,9 @@ function TaskDetail({
   async function createProperty(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const name = String(form.get("name") ?? "").trim();
+    const name = formString(form, "name").trim();
     const needsOptions = ["select", "multiSelect", "status"].includes(newPropertyType);
-    const options = String(form.get("options") ?? "").split(",").map((item) => item.trim()).filter(Boolean);
+    const options = formString(form, "options").split(",").map((item) => item.trim()).filter(Boolean);
     if (needsOptions && options.length === 0) {
       setError("Add at least one option for this property type.");
       return;
@@ -969,7 +964,7 @@ function TaskDetail({
     {loading ? <p className="loading document-loading" role="status">Loading task details…</p> : <div className="task-properties">{definitions.map((definition) => <label className="task-property" key={definition.id}><span>{definition.name}</span>{renderPropertyEditor(definition)}</label>)}{definitions.length === 0 && <p className="quiet-empty">No task properties are available in this workspace.</p>}</div>}
     {!editable && <p className="viewer-note">You have read-only access to this task.</p>}
     <NodeRelationsPanel node={node} nodes={nodes} workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} onOpen={onOpenNode} />
-    {propertyDialogOpen && <div className="workspace-dialog-scrim" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPropertyDialogOpen(false); }}><section className="workspace-dialog" role="dialog" aria-modal="true" aria-labelledby="property-dialog-title"><div className="eyebrow">WORKSPACE PROPERTY</div><h2 id="property-dialog-title">Add a property</h2><form onSubmit={(event) => void createProperty(event)}><label htmlFor="property-name">Name</label><input autoFocus id="property-name" name="name" required maxLength={120} placeholder="e.g. Estimate" /><label htmlFor="property-type">Type</label><select id="property-type" value={newPropertyType} onChange={(event) => setNewPropertyType(event.target.value)}><option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes or no</option><option value="date">Date</option><option value="dateTime">Date and time</option><option value="select">Select</option><option value="multiSelect">Multiple select</option><option value="status">Status</option><option value="duration">Duration</option><option value="email">Email</option><option value="url">URL</option><option value="phone">Phone</option></select>{["select", "multiSelect", "status"].includes(newPropertyType) && <><label htmlFor="property-options">Options, separated by commas</label><input id="property-options" name="options" required placeholder="e.g. Small, Medium, Large" /></>}{error && <p className="notice" role="alert">{error}</p>}<div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setPropertyDialogOpen(false)} /><AppButton label="Add property" variant="primary" type="submit" /></div></form></section></div>}
+    {propertyDialogOpen && <ModalDialog titleId="property-dialog-title" className="workspace-dialog" onClose={() => setPropertyDialogOpen(false)}><div className="eyebrow">WORKSPACE PROPERTY</div><h2 id="property-dialog-title">Add a property</h2><form onSubmit={(event) => void createProperty(event)}><label htmlFor="property-name">Name</label><input autoFocus id="property-name" name="name" required maxLength={120} placeholder="e.g. Estimate" /><label htmlFor="property-type">Type</label><select id="property-type" value={newPropertyType} onChange={(event) => setNewPropertyType(event.target.value)}><option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes or no</option><option value="date">Date</option><option value="dateTime">Date and time</option><option value="select">Select</option><option value="multiSelect">Multiple select</option><option value="status">Status</option><option value="duration">Duration</option><option value="email">Email</option><option value="url">URL</option><option value="phone">Phone</option></select>{["select", "multiSelect", "status"].includes(newPropertyType) && <><label htmlFor="property-options">Options, separated by commas</label><input id="property-options" name="options" required placeholder="e.g. Small, Medium, Large" /></>}{error && <p className="notice" role="alert">{error}</p>}<div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setPropertyDialogOpen(false)} /><AppButton label="Add property" variant="primary" type="submit" /></div></form></ModalDialog>}
   </section>;
 }
 

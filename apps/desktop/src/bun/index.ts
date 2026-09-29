@@ -8,7 +8,7 @@ ApplicationMenu.setApplicationMenu([
   { label: "Edit", submenu: [{ role: "undo" }, { role: "redo" }, { type: "separator" }, { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }] },
 ]);
 
-new BrowserWindow({
+export const mainWindow = new BrowserWindow({
   title: "Astryx Workspace",
   url: serverUrl,
   frame: { width: 1440, height: 960 },

@@ -1,9 +1,9 @@
 FROM oven/bun:1.4.2-alpine AS build
 WORKDIR /app
 COPY . .
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 RUN bun run build
-RUN bun install --production --frozen-lockfile
+RUN bun install --production --frozen-lockfile --ignore-scripts
 
 FROM oven/bun:1.4.2-alpine AS runtime
 WORKDIR /app

@@ -5,7 +5,15 @@ import { OfflineSyncQueue, IndexedDbSyncDocumentStorage, IndexedDbSyncMutationSt
 export const SYNC_PROTOCOL_VERSION = 1 as const;
 export const MAX_SYNC_MESSAGE_BYTES = 2_000_000;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const base64Pattern = /^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2,3})?$/;
+function isBase64Url(value: string): boolean {
+  if (value.length % 4 === 1) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    const isAlphaNumeric = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+    if (!isAlphaNumeric && code !== 45 && code !== 95) return false;
+  }
+  return true;
+}
 
 export type { SyncDocumentKind } from "@workspace/domain";
 
@@ -52,7 +60,7 @@ export function validateSyncClientMessage(value: unknown): SyncClientMessage {
   }
   if (value.kind === "join") {
     if ((value.documentKind !== "page" && value.documentKind !== "canvas") ||
-        typeof value.stateVector !== "string" || value.stateVector.length > 90_000 || !base64Pattern.test(value.stateVector)) {
+        typeof value.stateVector !== "string" || value.stateVector.length > 90_000 || !isBase64Url(value.stateVector)) {
       throw new RangeError("Sync join message is malformed.");
     }
     return value as unknown as SyncJoinMessage;
@@ -60,7 +68,7 @@ export function validateSyncClientMessage(value: unknown): SyncClientMessage {
   if ((value.documentKind !== "page" && value.documentKind !== "canvas") ||
       typeof value.mutationId !== "string" || !uuidPattern.test(value.mutationId) ||
       typeof value.update !== "string" || value.update.length === 0 || value.update.length > MAX_SYNC_MESSAGE_BYTES ||
-      !base64Pattern.test(value.update)) {
+      !isBase64Url(value.update)) {
     throw new RangeError("Sync update message is malformed.");
   }
   return value as unknown as SyncUpdateMessage;
@@ -78,17 +86,17 @@ export function encodeSyncBytes(bytes: Uint8Array): string {
   let binary = "";
   const chunkSize = 0x8000;
   for (let offset = 0; offset < bytes.byteLength; offset += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.byteLength)));
+    binary += String.fromCodePoint(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.byteLength)));
   }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
 }
 
 export function decodeSyncBytes(encoded: string): Uint8Array {
-  if (!base64Pattern.test(encoded)) throw new RangeError("Sync binary data is malformed.");
-  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+  if (!isBase64Url(encoded)) throw new RangeError("Sync binary data is malformed.");
+  const base64 = encoded.replaceAll("-", "+").replaceAll("_", "/");
   const binary = atob(base64 + "=".repeat((4 - base64.length % 4) % 4));
   const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.codePointAt(index) ?? 0;
   return bytes;
 }
 
@@ -102,7 +110,7 @@ export function parseSyncServerMessage(text: string): SyncServerMessage {
     return value as unknown as SyncServerMessage;
   }
   if ((value.kind === "sync" || value.kind === "accepted") && typeof value.serverRevision === "number" && Number.isSafeInteger(value.serverRevision) && value.serverRevision >= 0) {
-    if (value.kind === "sync" && typeof value.update === "string" && base64Pattern.test(value.update)) return value as unknown as SyncServerMessage;
+    if (value.kind === "sync" && typeof value.update === "string" && isBase64Url(value.update)) return value as unknown as SyncServerMessage;
     if (value.kind === "accepted" && typeof value.mutationId === "string" && uuidPattern.test(value.mutationId)) return value as unknown as SyncServerMessage;
   }
   throw new RangeError("Sync server message is malformed.");
@@ -172,7 +180,7 @@ export class SyncConnection {
   private readonly acknowledgements = new Map<string, { resolve: (value: boolean) => void; reject: (error: Error) => void }>();
   private readonly localUpdateListener: (update: Uint8Array, origin: unknown) => void;
 
-  constructor(private readonly options: SyncConnectionOptions) {
+  private constructor(private readonly options: SyncConnectionOptions) {
     this.queue = options.queue ?? new OfflineSyncQueue(new IndexedDbSyncMutationStorage());
     this.socketFactory = options.createWebSocket ?? ((url) => new WebSocket(url) as unknown as SyncWebSocketLike);
     this.reconnectDelay = options.minimumReconnectDelayMs ?? 500;
@@ -205,6 +213,9 @@ export class SyncConnection {
       mutationId: crypto.randomUUID(),
       update: encodeSyncBytes(Y.encodeStateAsUpdate(options.document)),
     } : null;
+  }
+
+  private start(): void {
     void this.persistDocumentCache();
     void this.connect();
   }
@@ -221,7 +232,9 @@ export class SyncConnection {
     } catch (error) {
       options.onCacheError?.(error instanceof Error ? error : new Error("Could not restore the local sync cache."));
     }
-    return new SyncConnection({ ...options, documentCache: cache, restoredFromCache });
+    const connection = new SyncConnection({ ...options, documentCache: cache, restoredFromCache });
+    connection.start();
+    return connection;
   }
 
   close(): void {
@@ -347,4 +360,4 @@ export class SyncConnection {
   }
 }
 
-export { IndexedDbSyncDocumentStorage, IndexedDbSyncMutationStorage, OfflineSyncQueue, type CachedSyncDocument, type QueuedSyncMutation, type SyncMutationStorage } from "./offline-queue";
+export { IndexedDbSyncDocumentStorage, IndexedDbSyncMutationStorage, OfflineSyncQueue, type CachedSyncDocument, type MutationInsertResult, type QueuedSyncMutation, type SyncMutationStorage } from "./offline-queue";

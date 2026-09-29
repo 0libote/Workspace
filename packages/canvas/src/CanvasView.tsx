@@ -16,7 +16,7 @@ export interface CanvasViewProps {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { credentials: "same-origin", ...init, headers: { ...(init?.headers ?? {}) } });
+  const response = await fetch(path, { credentials: "same-origin", ...init, headers: { ...init?.headers } });
   if (!response.ok) throw new Error(response.status === 409 ? "Canvas changed elsewhere. Reload to continue." : `Canvas request failed (${response.status}).`);
   return response.json() as Promise<T>;
 }

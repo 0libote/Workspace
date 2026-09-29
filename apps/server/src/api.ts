@@ -132,7 +132,7 @@ async function requireSession(database: SQL, request: Request): Promise<Authenti
   return session;
 }
 
-async function requireCsrf(session: AuthenticatedSession, request: Request): Promise<void> {
+function requireCsrf(session: AuthenticatedSession, request: Request): void {
   if (!validCsrfToken(session, request)) throw new HttpError(403, "csrf_validation_failed");
 }
 

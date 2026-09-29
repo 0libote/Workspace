@@ -30,7 +30,7 @@ test("browser file export creates a named download without shell access", async 
     document: { createElement: () => anchor, body: { append() {} } },
     URL: { createObjectURL: () => "blob:download", revokeObjectURL: (url: string) => { revokedUrl = url; } },
     Blob,
-    window: { open() {} },
+    window: { open() {}, focus() {} },
     setTimeout(callback: () => void) { return callback; },
   } as unknown as WebPlatformRuntime;
   const platform = createWebPlatform(runtime);
@@ -40,4 +40,27 @@ test("browser file export creates a named download without shell access", async 
   expect(downloadUrl).toBe("blob:download");
   await expect(platform.saveFile("../unsafe.json", "{}", "application/json")).rejects.toThrow("single file name");
   expect(revokedUrl).toBe("");
+});
+
+test("clicking a browser notification returns focus to the workspace", async () => {
+  let focused = false;
+  const instances: Notification[] = [];
+  class TestNotification {
+    static permission = "granted";
+    onclick: Notification["onclick"] = null;
+    constructor() { instances.push(this as unknown as Notification); }
+  }
+  const runtime = {
+    navigator: { onLine: true },
+    document: { createElement() { throw new Error("not used"); }, body: { append() {} } },
+    URL,
+    Blob,
+    Notification: TestNotification,
+    window: { open() {}, focus() { focused = true; } },
+  } as unknown as WebPlatformRuntime;
+
+  const result = await createWebPlatform(runtime).notify("Reminder", "Task due");
+  expect(result).toBe("shown");
+  instances[0]?.onclick?.call(instances[0], {} as MouseEvent);
+  expect(focused).toBe(true);
 });

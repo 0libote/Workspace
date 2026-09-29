@@ -155,7 +155,7 @@ export interface CalendarEvent {
 }
 
 function escapeCalendarText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/\r\n|\r|\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+  return value.replace(/\\/g, String.raw`\\`).replace(/\r\n|\r|\n/g, String.raw`\n`).replace(/,/g, String.raw`\,`).replace(/;/g, String.raw`\;`);
 }
 
 const utf8Encoder = new TextEncoder();
