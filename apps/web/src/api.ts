@@ -136,7 +136,11 @@ export class ApiError extends Error {
 }
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(path, { credentials: "same-origin", ...init });
+  const requestUrl = new URL(path, window.location.origin);
+  if (requestUrl.origin !== window.location.origin || !requestUrl.pathname.startsWith("/api/")) {
+    throw new ApiError("invalid_api_path", 400);
+  }
+  const response = await fetch(requestUrl, { credentials: "same-origin", ...init });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({})) as ApiFailure;
     throw new ApiError(payload.error ?? "request_failed", response.status);
