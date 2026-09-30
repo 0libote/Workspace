@@ -279,14 +279,30 @@ export function CollectionDetail({
     {openButton(node)}
   </article>;
 
+  const collectionView = (() => {
+    if (collection.view.layout === "calendar") {
+      return <CalendarView workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} collectionId={collection.id} onOpenNode={onOpenNode} />;
+    }
+    if (loading && items.length === 0) return <p className="loading" role="status">Loading collection…</p>;
+    if (items.length === 0) return <div className="quiet-empty"><span aria-hidden="true">▦</span><p>No nodes match this collection yet.</p></div>;
+    if (collection.view.layout === "table") {
+      return <VirtualizedRecords items={items} role="table" label="Collection table" estimateSize={52} getKey={(node) => node.id} header={tableHeader} renderItem={renderTableRow} />;
+    }
+    if (collection.view.layout === "board") {
+      const types = [...new Set(items.map(({ type }) => type))];
+      return <div className="collection-board">{types.map((type) => {
+        const groupedNodes = items.filter((node) => node.type === type);
+        return <section className="collection-board-column" key={type}><h2>{type}<span>{groupedNodes.length}</span></h2><VirtualizedRecords items={groupedNodes} role="list" label={`${type} collection items`} estimateSize={170} getKey={(node) => node.id} renderItem={(node) => <article className="collection-board-card"><span className="collection-card-title">{node.title}</span>{extraColumns.map((column) => <label className="collection-card-field" key={column}><span>{definitionLabel(column)}</span>{renderColumn(node, column)}</label>)}{openButton(node)}</article>} /></section>;
+      })}</div>;
+    }
+    return <VirtualizedRecords items={items} role="list" label="Collection items" estimateSize={78} getKey={(node) => node.id} renderItem={renderListRow} />;
+  })();
+
   return <section className="collection-detail" aria-label={`Collection: ${collection.name}`}>
     <div className="collection-toolbar"><AppButton label="Back to items" variant="ghost" onClick={onClose} /><span className="document-save-state">Saved collection</span></div>
     <div className="collection-heading"><div><div className="eyebrow">COLLECTION · {collection.view.layout.toUpperCase()}</div><h1>{collection.name}</h1><p>{collection.query.types.length ? collection.query.types.join(", ") : "All node types"}{collection.query.titleContains ? ` · title contains “${collection.query.titleContains}”` : ""} · sorted by {collection.query.sortBy} ({collection.query.sortDirection})</p></div><span className="count-label">{items.length} {items.length === 1 ? "item" : "items"}</span></div>
     {error && <p className="notice" role="alert">{error}</p>}
-    {collection.view.layout === "calendar" ? <CalendarView workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} collectionId={collection.id} onOpenNode={onOpenNode} /> : loading && items.length === 0 ? <p className="loading" role="status">Loading collection…</p> : items.length === 0 ? <div className="quiet-empty"><span aria-hidden="true">▦</span><p>No nodes match this collection yet.</p></div> : collection.view.layout === "table" ? <VirtualizedRecords items={items} role="table" label="Collection table" estimateSize={52} getKey={(node) => node.id} header={tableHeader} renderItem={renderTableRow} /> : collection.view.layout === "board" ? <div className="collection-board">{[...new Set(items.map(({ type }) => type))].map((type) => {
-      const groupedNodes = items.filter((node) => node.type === type);
-      return <section className="collection-board-column" key={type}><h2>{type}<span>{groupedNodes.length}</span></h2><VirtualizedRecords items={groupedNodes} role="list" label={`${type} collection items`} estimateSize={170} getKey={(node) => node.id} renderItem={(node) => <article className="collection-board-card"><span className="collection-card-title">{node.title}</span>{extraColumns.map((column) => <label className="collection-card-field" key={column}><span>{definitionLabel(column)}</span>{renderColumn(node, column)}</label>)}{openButton(node)}</article>} /></section>;
-    })}</div> : <VirtualizedRecords items={items} role="list" label="Collection items" estimateSize={78} getKey={(node) => node.id} renderItem={renderListRow} />}
+    {collectionView}
     {collection.view.layout !== "calendar" && hasMore && <div className="search-more"><AppButton label="Load more collection items" variant="ghost" onClick={() => void loadMore()} isLoading={loading} /></div>}
   </section>;
 }

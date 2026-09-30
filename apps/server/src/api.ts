@@ -11,6 +11,7 @@ import {
   type MembershipRole,
   type CollectionQuery,
   type NodeId,
+  type WorkspaceNode,
   type NodeType,
   type PropertyDefinition,
   type PropertyDefinitionId,
@@ -42,7 +43,7 @@ import {
   PostgresNodeRelationRepository,
   PostgresRelationDefinitionRepository,
 } from "@workspace/db";
-import { formatInstantInTimeZone, projectNodeSchedule, resolveLocalDateTime, serializeCalendarIcs, startOfLocalDate, type CalendarEvent } from "@workspace/calendar";
+import { formatInstantInTimeZone, projectNodeSchedule, resolveLocalDateTime, serializeCalendarIcs, startOfLocalDate, type CalendarEvent, type ScheduleDateValue } from "@workspace/calendar";
 import {
   createSecretToken,
   expiredSessionCookie,
@@ -134,6 +135,12 @@ async function requireSession(database: SQL, request: Request): Promise<Authenti
 
 function requireCsrf(session: AuthenticatedSession, request: Request): void {
   if (!validCsrfToken(session, request)) throw new HttpError(403, "csrf_validation_failed");
+}
+
+function scheduleValue(dateTime: string | undefined, date: string | undefined): ScheduleDateValue | null {
+  if (dateTime) return { type: "dateTime", value: dateTime };
+  if (date) return { type: "date", value: date };
+  return null;
 }
 
 async function requireWorkspaceRole(
@@ -285,7 +292,7 @@ async function login(request: Request, database: SQL): Promise<Response> {
 }
 
 async function logout(request: Request, database: SQL, session: AuthenticatedSession): Promise<Response> {
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   await database`UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE id = ${session.id}::uuid`;
   return addExpiredCookie(new Response(null, { status: 204 }), request);
 }
@@ -335,7 +342,7 @@ async function updateWorkspaceSettings(
   session: AuthenticatedSession,
   workspaceId: WorkspaceId,
 ): Promise<Response> {
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   await requireWorkspaceRole(database, workspaceId, session.user.id, "write");
   const input = await readJson(request);
   const updated = await new PostgresWorkspaceRepository(database).updateTimeZone(
@@ -347,7 +354,7 @@ async function updateWorkspaceSettings(
 }
 
 async function createWorkspaceForSession(request: Request, database: SQL, session: AuthenticatedSession): Promise<Response> {
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   const input = await readJson(request);
   const now = new Date().toISOString();
   const workspace = createWorkspace({
@@ -372,7 +379,7 @@ async function createWorkspaceForSession(request: Request, database: SQL, sessio
 }
 
 async function createWorkspaceNode(request: Request, database: SQL, session: AuthenticatedSession): Promise<Response> {
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   const input = await readJson(request);
   const workspaceId = requiredString(input, "workspaceId") as WorkspaceId;
   if (!uuidPattern.test(workspaceId)) throw new HttpError(400, "invalid_workspace_id");
@@ -531,7 +538,7 @@ async function moveCalendarNode(request: Request, url: URL, database: SQL, sessi
   const workspaceIdValue = url.searchParams.get("workspaceId");
   if (!workspaceIdValue || !uuidPattern.test(workspaceIdValue)) throw new HttpError(400, "invalid_workspace_id");
   const workspaceId = workspaceIdValue as WorkspaceId;
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   await requireWorkspaceRole(database, workspaceId, session.user.id, "write");
   const input = await readJson(request);
   const targetDate = calendarDate(typeof input.date === "string" ? input.date : null);
@@ -556,8 +563,8 @@ async function moveCalendarNode(request: Request, url: URL, database: SQL, sessi
   const dueTime = valueAsDate(propertyNamed("Due time"), "dateTime");
   const durationValue = propertyNamed("Duration");
   const schedule = projectNodeSchedule({
-    start: startTime ? { type: "dateTime", value: startTime } : startDate ? { type: "date", value: startDate } : null,
-    due: dueTime ? { type: "dateTime", value: dueTime } : dueDate ? { type: "date", value: dueDate } : null,
+    start: scheduleValue(startTime, startDate),
+    due: scheduleValue(dueTime, dueDate),
     durationMinutes: durationValue?.type === "duration" ? durationValue.value : null,
   });
   if (!schedule || schedule.kind === "invalid") throw new HttpError(409, "node_not_scheduled");
@@ -617,8 +624,8 @@ async function moveCalendarNode(request: Request, url: URL, database: SQL, sessi
   const movedDueDate = valueAsDate(movedValue("Due date"), "date");
   const movedDuration = movedValue("Duration");
   const movedSchedule = projectNodeSchedule({
-    start: movedStartTime ? { type: "dateTime", value: movedStartTime } : movedStartDate ? { type: "date", value: movedStartDate } : null,
-    due: movedDueTime ? { type: "dateTime", value: movedDueTime } : movedDueDate ? { type: "date", value: movedDueDate } : null,
+    start: scheduleValue(movedStartTime, movedStartDate),
+    due: scheduleValue(movedDueTime, movedDueDate),
     durationMinutes: movedDuration?.type === "duration" ? movedDuration.value : null,
   });
   return json({ node, schedule: movedSchedule });
@@ -679,7 +686,7 @@ async function workspacePropertyDefinitions(
     return json(await repository.getForWorkspace(workspaceId));
   }
   if (request.method !== "POST") throw new HttpError(405, "method_not_allowed");
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   await requireWorkspaceRole(database, workspaceId, session.user.id, "write");
   const input = await readJson(request);
   const propertyType = requiredString(input, "type", 32);
@@ -719,7 +726,7 @@ async function workspaceCollections(
     return json(await repository.listByWorkspace(workspaceId));
   }
   if (request.method !== "POST") throw new HttpError(405, "method_not_allowed");
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   await requireWorkspaceRole(database, workspaceId, session.user.id, "write");
   const input = await readJson(request);
   const collection = createSavedCollection({
@@ -766,7 +773,7 @@ async function collectionOperation(
     return json({ collection, ...result, propertyDefinitions, properties });
   }
   if (request.method === "GET") return json(collection);
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   if (request.method === "DELETE") {
     await collections.remove(workspaceId, collectionId);
     return new Response(null, { status: 204 });
@@ -802,7 +809,7 @@ async function nodeProperties(
   const repository = new PostgresNodePropertyRepository(database);
   if (request.method === "GET" && !definitionId) return json(await repository.getForNode(workspaceId, nodeId));
   if (!definitionId) throw new HttpError(404, "not_found");
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   if (request.method === "DELETE") {
     const removed = await repository.remove(workspaceId, nodeId, definitionId);
     if (!removed) throw new HttpError(404, "property_value_not_found");
@@ -832,7 +839,7 @@ async function workspaceRelationDefinitions(
     return json(await repository.getForWorkspace(workspaceId));
   }
   if (request.method !== "POST") throw new HttpError(405, "method_not_allowed");
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   await requireWorkspaceRole(database, workspaceId, session.user.id, "write");
   const input = await readJson(request);
   const type = requiredString(input, "type", 80);
@@ -873,7 +880,7 @@ async function nodeRelations(
       : await repository.getOutgoing(workspaceId, nodeId));
   }
   if (direction !== "outgoing" || request.method !== "POST") throw new HttpError(405, "method_not_allowed");
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   const input = await readJson(request);
   const targetId = requiredString(input, "toNodeId", 36);
   const relationType = requiredString(input, "type", 80);
@@ -902,13 +909,21 @@ async function nodeOperation(
 ): Promise<Response> {
   await requireWorkspaceRole(database, workspaceId, session.user.id, action === "read" ? "read" : "write");
   const repository = new PostgresNodeRepository(database);
-  const node = action === "read"
-    ? await repository.getById(workspaceId, nodeId)
-    : action === "rename"
-      ? await repository.updateTitle(workspaceId, nodeId, requiredString(await readJson(request), "title", 500), session.user.id, new Date().toISOString())
-      : action === "archive"
-        ? await repository.archive(workspaceId, nodeId, session.user.id, new Date().toISOString())
-        : await repository.restore(workspaceId, nodeId, session.user.id, new Date().toISOString());
+  let node: WorkspaceNode | null;
+  switch (action) {
+    case "read":
+      node = await repository.getById(workspaceId, nodeId);
+      break;
+    case "rename":
+      node = await repository.updateTitle(workspaceId, nodeId, requiredString(await readJson(request), "title", 500), session.user.id, new Date().toISOString());
+      break;
+    case "archive":
+      node = await repository.archive(workspaceId, nodeId, session.user.id, new Date().toISOString());
+      break;
+    case "restore":
+      node = await repository.restore(workspaceId, nodeId, session.user.id, new Date().toISOString());
+      break;
+  }
   if (!node) throw new HttpError(404, "node_not_found");
   return json(node);
 }
@@ -932,7 +947,7 @@ async function nodeCanvasOperation(
     return json(canvas ?? { workspaceId, nodeId, scene: EMPTY_CANVAS_SCENE, bindings: [], revision: 0, updatedAt: null, updatedBy: null });
   }
   if (request.method !== "PUT") throw new HttpError(405, "method_not_allowed");
-  await requireCsrf(session, request);
+  requireCsrf(session, request);
   const input = await readJson(request, 9_000_000);
   if (typeof input.expectedRevision !== "number" || !Number.isInteger(input.expectedRevision) || input.expectedRevision < 0) {
     throw new HttpError(400, "invalid_canvas_revision");
@@ -1055,7 +1070,7 @@ export function createAppHandler(database: SQL | null): (request: Request) => Pr
           });
         }
         if (request.method !== "PUT") throw new HttpError(405, "method_not_allowed");
-        await requireCsrf(session, request);
+        requireCsrf(session, request);
         const input = await readJson(request);
         const expectedRevision = input.expectedRevision;
         if (typeof expectedRevision !== "number" || !Number.isInteger(expectedRevision) || expectedRevision < 0) {
@@ -1117,7 +1132,7 @@ export function createAppHandler(database: SQL | null): (request: Request) => Pr
         if (request.method === "GET" && !nodeRoute[2]) {
           return await nodeOperation(request, database, session, nodeId, workspaceId, "read");
         }
-        await requireCsrf(session, request);
+        requireCsrf(session, request);
         if (request.method === "PATCH" && !nodeRoute[2]) {
           return await nodeOperation(request, database, session, nodeId, workspaceId, "rename");
         }
