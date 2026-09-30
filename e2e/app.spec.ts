@@ -536,13 +536,13 @@ test("explore a focused workspace graph", async ({ page }) => {
   const title = `Graph node ${Date.now()}`;
   await page.getByLabel("Item type", { exact: true }).selectOption("task");
   await page.getByLabel("Item title").fill(title);
+  const createdNodeResponse = page.waitForResponse((response) =>
+    response.url().endsWith("/api/nodes") &&
+    response.request().method() === "POST" &&
+    response.ok(),
+  );
   await page.getByRole("button", { name: "Add item" }).click();
-  const node = await page.evaluate(async (nodeTitle) => {
-    const workspaceId = (document.querySelector("#workspace-select") as HTMLSelectElement).value;
-    const response = await fetch(`/api/search?workspaceId=${workspaceId}&query=${encodeURIComponent(nodeTitle)}&type=task`);
-    const data = await response.json() as { items: Array<{ node: { id: string; title: string } }> };
-    return data.items[0]?.node;
-  }, title);
+  const node = await (await createdNodeResponse).json() as { id: string; title: string };
   expect(node?.title).toBe(title);
   await page.getByRole("link", { name: "Graph" }).click();
   const graph = page.getByRole("region", { name: "Workspace graph" });
