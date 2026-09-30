@@ -26,43 +26,38 @@ function nextCalendarDate(value: string): string {
   return next.toISOString().slice(0, 10);
 }
 
-/** Projects canonical Start date, Due date, and Duration properties into a display-only schedule. */
-export function projectNodeSchedule(input: {
+type ProjectNodeScheduleInput = {
   readonly start: ScheduleDateValue | null;
   readonly due: ScheduleDateValue | null;
   readonly durationMinutes?: number | null;
-}): NodeSchedule | null {
-  const hasTimedValue = input.start?.type === "dateTime" || input.due?.type === "dateTime";
-  if (input.durationMinutes !== undefined && input.durationMinutes !== null &&
-      (!Number.isFinite(input.durationMinutes) || input.durationMinutes < 0)) {
-    return { kind: "invalid", reason: "invalidDuration" };
-  }
+};
 
-  if (hasTimedValue) {
-    let startInstantValue: string | null = null;
-    if (input.start?.type === "dateTime") startInstantValue = input.start.value;
-    else if (input.due?.type === "dateTime") startInstantValue = input.due.value;
-    if (startInstantValue === null) return null;
-    const start = Date.parse(startInstantValue);
-    if (!Number.isFinite(start)) return { kind: "invalid", reason: "invalidInstant" };
-    // A timed due value is an end only when a timed start exists. If it is
-    // the only timed value, it is the placement instant and duration applies.
-    const dueInstantValue = input.start?.type === "dateTime" && input.due?.type === "dateTime"
-      ? input.due.value
-      : undefined;
-    const due = dueInstantValue === undefined ? undefined : Date.parse(dueInstantValue);
-    if (dueInstantValue !== undefined && !Number.isFinite(due)) return { kind: "invalid", reason: "invalidInstant" };
-    if (due !== undefined && due < start) return { kind: "invalid", reason: "endBeforeStart" };
-    const end = due ?? (input.durationMinutes === undefined || input.durationMinutes === null
-      ? undefined
-      : start + input.durationMinutes * 60_000);
-    return {
-      kind: "timed",
-      startInstant: new Date(start).toISOString(),
-      ...(end === undefined ? {} : { endInstant: new Date(end).toISOString() }),
-    };
-  }
+function projectTimedSchedule(input: ProjectNodeScheduleInput): NodeSchedule | null {
+  let startInstantValue: string | null = null;
+  if (input.start?.type === "dateTime") startInstantValue = input.start.value;
+  else if (input.due?.type === "dateTime") startInstantValue = input.due.value;
+  if (startInstantValue === null) return null;
+  const start = Date.parse(startInstantValue);
+  if (!Number.isFinite(start)) return { kind: "invalid", reason: "invalidInstant" };
+  // A timed due value is an end only when a timed start exists. If it is
+  // the only timed value, it is the placement instant and duration applies.
+  const dueInstantValue = input.start?.type === "dateTime" && input.due?.type === "dateTime"
+    ? input.due.value
+    : undefined;
+  const due = dueInstantValue === undefined ? undefined : Date.parse(dueInstantValue);
+  if (dueInstantValue !== undefined && !Number.isFinite(due)) return { kind: "invalid", reason: "invalidInstant" };
+  if (due !== undefined && due < start) return { kind: "invalid", reason: "endBeforeStart" };
+  const end = due ?? (input.durationMinutes === undefined || input.durationMinutes === null
+    ? undefined
+    : start + input.durationMinutes * 60_000);
+  return {
+    kind: "timed",
+    startInstant: new Date(start).toISOString(),
+    ...(end === undefined ? {} : { endInstant: new Date(end).toISOString() }),
+  };
+}
 
+function projectAllDaySchedule(input: ProjectNodeScheduleInput): NodeSchedule | null {
   const startDate = input.start?.type === "date" ? input.start.value : undefined;
   const dueDate = input.due?.type === "date" ? input.due.value : undefined;
   const firstDate = startDate ?? dueDate;
@@ -73,6 +68,16 @@ export function projectNodeSchedule(input: {
   const inclusiveEnd = dueDate ?? firstDate;
   if (inclusiveEnd < firstDate) return { kind: "invalid", reason: "endBeforeStart" };
   return { kind: "allDay", startDate: firstDate, endDateExclusive: nextCalendarDate(inclusiveEnd) };
+}
+
+/** Projects canonical Start date, Due date, and Duration properties into a display-only schedule. */
+export function projectNodeSchedule(input: ProjectNodeScheduleInput): NodeSchedule | null {
+  if (input.durationMinutes !== undefined && input.durationMinutes !== null &&
+      (!Number.isFinite(input.durationMinutes) || input.durationMinutes < 0)) {
+    return { kind: "invalid", reason: "invalidDuration" };
+  }
+  const hasTimedValue = input.start?.type === "dateTime" || input.due?.type === "dateTime";
+  return hasTimedValue ? projectTimedSchedule(input) : projectAllDaySchedule(input);
 }
 
 function partsForInstant(instant: number, timeZone: string): Record<string, string> {

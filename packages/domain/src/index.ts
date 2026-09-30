@@ -775,41 +775,37 @@ export function isPropertyValue(value: unknown): value is PropertyValue {
   }
 }
 
-export function validatePropertyValue(definition: PropertyDefinition, value: unknown): asserts value is PropertyValue {
-  if (!isPropertyValue(value)) {
-    throw new DomainError("invalid_property_value", `Property ${definition.name} has a malformed value.`);
-  }
-  if (definition.type !== value.type) {
-    throw new DomainError("invalid_property_value", `Property ${definition.name} expects ${definition.type}, received ${value.type}.`);
-  }
-
+function validateDatePropertyValue(definition: PropertyDefinition, value: PropertyValue): void {
   if ((value.type === "date" && !isValidDate(value.value)) ||
       (value.type === "dateTime" && !isValidTimestamp(value.value))) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} has an invalid date value.`);
   }
-
   if (value.type === "dateRange" &&
       (!isValidTimestamp(value.value.start) || !isValidTimestamp(value.value.end) ||
         Date.parse(value.value.start) > Date.parse(value.value.end))) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} has an invalid date range.`);
   }
+}
 
+function validateOptionPropertyValue(definition: PropertyDefinition, value: PropertyValue): void {
   if ((value.type === "select" || value.type === "status") && definition.options && !definition.options.includes(value.value)) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} must use one of its configured options.`);
   }
-
   if (value.type === "multiSelect" && definition.options && value.value.some((option) => !definition.options?.includes(option))) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} contains an unconfigured option.`);
   }
+}
 
+function validateNumericPropertyValue(definition: PropertyDefinition, value: PropertyValue): void {
   if (value.type === "number" && !Number.isFinite(value.value)) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} must be a finite number.`);
   }
-
   if (value.type === "duration" && value.value < 0) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} must be zero or more.`);
   }
+}
 
+function validateAddressPropertyValue(definition: PropertyDefinition, value: PropertyValue): void {
   if (value.type === "url") {
     try {
       const parsed = new URL(value.value);
@@ -818,10 +814,22 @@ export function validatePropertyValue(definition: PropertyDefinition, value: unk
       throw new DomainError("invalid_property_value", `Property ${definition.name} must be an absolute HTTP or HTTPS URL.`);
     }
   }
-
   if (value.type === "email" && !isValidEmailAddress(value.value)) {
     throw new DomainError("invalid_property_value", `Property ${definition.name} must contain a valid email address.`);
   }
+}
+
+export function validatePropertyValue(definition: PropertyDefinition, value: unknown): asserts value is PropertyValue {
+  if (!isPropertyValue(value)) {
+    throw new DomainError("invalid_property_value", `Property ${definition.name} has a malformed value.`);
+  }
+  if (definition.type !== value.type) {
+    throw new DomainError("invalid_property_value", `Property ${definition.name} expects ${definition.type}, received ${value.type}.`);
+  }
+  validateDatePropertyValue(definition, value);
+  validateOptionPropertyValue(definition, value);
+  validateNumericPropertyValue(definition, value);
+  validateAddressPropertyValue(definition, value);
 }
 
 export function getBacklinks(nodeId: NodeId, relations: readonly NodeRelation[]): readonly NodeRelation[] {

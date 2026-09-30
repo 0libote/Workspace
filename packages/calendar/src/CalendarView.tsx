@@ -14,6 +14,27 @@ function formString(form: FormData, name: string): string {
   return typeof value === "string" ? value : "";
 }
 
+type OptimisticMoveSchedule =
+  | { readonly schedule: CalendarEvent["schedule"] }
+  | { readonly error: string };
+
+function optimisticMoveSchedule(event: CalendarEvent, targetDate: string, timeZone: string): OptimisticMoveSchedule | null {
+  if (event.schedule.kind === "invalid") return null;
+  if (event.schedule.kind === "allDay") {
+    const offset = Math.round((Date.parse(`${targetDate}T00:00:00Z`) - Date.parse(`${event.schedule.startDate}T00:00:00Z`)) / 86_400_000);
+    const end = new Date(Date.parse(`${event.schedule.endDateExclusive}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
+    return { schedule: { kind: "allDay", startDate: targetDate, endDateExclusive: end } };
+  }
+  const localStart = formatInstantInTimeZone(event.schedule.startInstant, timeZone);
+  const resolved = resolveLocalDateTime(`${targetDate}T${localStart.slice(11)}`, timeZone);
+  if (resolved.kind === "nonexistent") {
+    return { error: "That local time does not exist because the clock changes. Choose another date." };
+  }
+  const duration = event.schedule.endInstant ? Date.parse(event.schedule.endInstant) - Date.parse(event.schedule.startInstant) : undefined;
+  const endInstant = duration === undefined ? undefined : new Date(Date.parse(resolved.instant) + duration).toISOString();
+  return { schedule: { kind: "timed", startInstant: resolved.instant, ...(endInstant === undefined ? {} : { endInstant }) } };
+}
+
 function addDays(date: Date, count: number): Date {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + count);
@@ -118,19 +139,11 @@ export function CalendarView({ workspaceId, timeZone, csrfToken, editable, colle
     if (!editable || movingNodeId) return;
     const before = events;
     const event = before.find(({ node }) => node.id === nodeId);
-    if (!event || event.schedule.kind === "invalid") return;
-    let optimistic: CalendarEvent["schedule"];
-    if (event.schedule.kind === "allDay") {
-      const offset = Math.round((Date.parse(`${targetDate}T00:00:00Z`) - Date.parse(`${event.schedule.startDate}T00:00:00Z`)) / 86_400_000);
-      const end = new Date(Date.parse(`${event.schedule.endDateExclusive}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
-      optimistic = { kind: "allDay", startDate: targetDate, endDateExclusive: end };
-    } else {
-      const localStart = formatInstantInTimeZone(event.schedule.startInstant, timeZone);
-      const resolved = resolveLocalDateTime(`${targetDate}T${localStart.slice(11)}`, timeZone);
-      if (resolved.kind === "nonexistent") { setError("That local time does not exist because the clock changes. Choose another date."); return; }
-      const duration = event.schedule.endInstant ? Date.parse(event.schedule.endInstant) - Date.parse(event.schedule.startInstant) : undefined;
-      optimistic = { kind: "timed", startInstant: resolved.instant, ...(duration === undefined ? {} : { endInstant: new Date(Date.parse(resolved.instant) + duration).toISOString() }) };
-    }
+    if (!event) return;
+    const move = optimisticMoveSchedule(event, targetDate, timeZone);
+    if (!move) return;
+    if ("error" in move) { setError(move.error); return; }
+    const optimistic = move.schedule;
     setError("");
     setEvents(before.map((item) => item.node.id === nodeId ? { ...item, schedule: optimistic } : item));
     setMovingNodeId(nodeId);

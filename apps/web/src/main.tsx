@@ -572,9 +572,14 @@ function App() {
           <AppButton className="mobile-signout" label="Sign out" variant="ghost" onClick={() => void logout()} />
         </header>
         <div className="content">
-          {(() => { if (openedCanvas) return (
+          {(() => {
+            if (openedCanvas) {
+              return (
             <Suspense fallback={<p className="loading">Loading canvas…</p>}><CanvasView key={openedCanvas.id} canvasId={openedCanvas.id} workspaceId={workspaceId} csrfToken={session.csrfToken} editable={canWrite} nodes={activeNodes} onClose={() => setOpenedCanvas(null)} onOpenNode={(node) => { const item = activeNodes.find(({ id }) => id === node.id); if (item?.type === "page") openPage(item); else if (item?.type === "task") setOpenedTask(item); }} onCreateNode={async (type, title) => { const node = await apiRequest<WorkspaceNode>("/api/nodes", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": session.csrfToken }, body: JSON.stringify({ workspaceId, type, title }) }); setNodes((current) => [node, ...current]); return node; }} /></Suspense>
-          ); if (openedTask) return (
+              );
+            }
+            if (openedTask) {
+              return (
             <TaskDetail
               key={openedTask.id}
               node={openedTask}
@@ -586,7 +591,10 @@ function App() {
               onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedTask(null)}
             />
-          ); if (openedPage) return (
+              );
+            }
+            if (openedPage) {
+              return (
             <PageDetail
               key={openedPage.id}
               node={openedPage}
@@ -599,7 +607,10 @@ function App() {
               onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedPage(null)}
             />
-          ); if (openedCollection) return (
+              );
+            }
+            if (openedCollection) {
+              return (
             <CollectionDetail
               key={openedCollection.id}
               collection={openedCollection}
@@ -610,7 +621,9 @@ function App() {
               onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedCollection(null)}
             />
-          ); return <>
+              );
+            }
+            return <>
           <div className="page-heading">
             <div><div className="eyebrow">YOUR SPACE</div><h1>{activeWorkspace?.name ?? "Welcome to Commonplace"}</h1><p className="subtitle">A clear place for the work that matters.</p></div>
             {activeWorkspace && <div className="workspace-heading-actions"><span className="role-pill">{activeWorkspace.role}</span><AppButton label="Export workspace JSON" variant="ghost" size="sm" isLoading={exportingWorkspace} onClick={() => void exportWorkspace()} />{canWrite && <AppButton label="Workspace settings" variant="ghost" size="sm" onClick={() => { setWorkspaceTimeZoneDraft(activeWorkspace.timeZone); setWorkspaceSettingsOpen(true); setNotice(""); }} />}</div>}
@@ -1015,10 +1028,20 @@ function TaskDetail({
     const disabled = !editable || savingId !== "";
     switch (definition.type) {
       case "status":
-      case "select":
+      case "select": {
+        const selectionType = definition.type;
         return options.length > 0
-          ? <select aria-label={definition.name} value={typeof current === "string" ? current : ""} disabled={disabled} onChange={(event) => void updateProperty(definition, event.target.value ? definition.type === "status" ? { type: "status", value: event.target.value } : { type: "select", value: event.target.value } : null)}><option value="">Not set</option>{options.map((option) => <option value={option} key={option}>{option}</option>)}</select>
+          ? <select aria-label={definition.name} value={typeof current === "string" ? current : ""} disabled={disabled} onChange={(event) => {
+            const selected = event.target.value;
+            let nextValue: PropertyValue | null = null;
+            if (selected) {
+              if (selectionType === "status") nextValue = { type: "status", value: selected };
+              else nextValue = { type: "select", value: selected };
+            }
+            void updateProperty(definition, nextValue);
+          }}><option value="">Not set</option>{options.map((option) => <option value={option} key={option}>{option}</option>)}</select>
           : <output className="unsupported-property">Add options to edit this field.</output>;
+      }
       case "multiSelect":
         return options.length > 0
           ? <select aria-label={definition.name} multiple value={Array.isArray(current) ? current : []} disabled={disabled} onChange={(event) => void updateProperty(definition, { type: "multiSelect", value: [...event.currentTarget.selectedOptions].map((option) => option.value) })}>{options.map((option) => <option value={option} key={option}>{option}</option>)}</select>
