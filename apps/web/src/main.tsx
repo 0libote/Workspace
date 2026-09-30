@@ -69,6 +69,24 @@ function emptyNodeMessage(view: NodeView): string {
   }
 }
 
+function safeFilenameStem(value: string): string {
+  let result = "";
+  let hasSeparator = false;
+  for (const character of value) {
+    const normalized = character.toLowerCase();
+    const code = normalized.codePointAt(0)!;
+    const safe = normalized.length === 1 && ((code >= 97 && code <= 122) || (code >= 48 && code <= 57) || character === "_" || character === "-");
+    if (safe) {
+      result += character;
+      hasSeparator = false;
+    } else if (!hasSeparator) {
+      result += "-";
+      hasSeparator = true;
+    }
+  }
+  return result;
+}
+
 interface LocalPageDraft {
   readonly baseRevision: number;
   readonly content: readonly JsonValue[];
@@ -554,9 +572,9 @@ function App() {
           <AppButton className="mobile-signout" label="Sign out" variant="ghost" onClick={() => void logout()} />
         </header>
         <div className="content">
-          {openedCanvas ? (
+          {(() => { if (openedCanvas) return (
             <Suspense fallback={<p className="loading">Loading canvas…</p>}><CanvasView key={openedCanvas.id} canvasId={openedCanvas.id} workspaceId={workspaceId} csrfToken={session.csrfToken} editable={canWrite} nodes={activeNodes} onClose={() => setOpenedCanvas(null)} onOpenNode={(node) => { const item = activeNodes.find(({ id }) => id === node.id); if (item?.type === "page") openPage(item); else if (item?.type === "task") setOpenedTask(item); }} onCreateNode={async (type, title) => { const node = await apiRequest<WorkspaceNode>("/api/nodes", { method: "POST", headers: { "content-type": "application/json", "x-csrf-token": session.csrfToken }, body: JSON.stringify({ workspaceId, type, title }) }); setNodes((current) => [node, ...current]); return node; }} /></Suspense>
-          ) : openedTask ? (
+          ); if (openedTask) return (
             <TaskDetail
               key={openedTask.id}
               node={openedTask}
@@ -568,7 +586,7 @@ function App() {
               onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedTask(null)}
             />
-          ) : openedPage ? (
+          ); if (openedPage) return (
             <PageDetail
               key={openedPage.id}
               node={openedPage}
@@ -581,7 +599,7 @@ function App() {
               onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedPage(null)}
             />
-          ) : openedCollection ? (
+          ); if (openedCollection) return (
             <CollectionDetail
               key={openedCollection.id}
               collection={openedCollection}
@@ -592,7 +610,7 @@ function App() {
               onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedCollection(null)}
             />
-          ) : <>
+          ); return <>
           <div className="page-heading">
             <div><div className="eyebrow">YOUR SPACE</div><h1>{activeWorkspace?.name ?? "Welcome to Commonplace"}</h1><p className="subtitle">A clear place for the work that matters.</p></div>
             {activeWorkspace && <div className="workspace-heading-actions"><span className="role-pill">{activeWorkspace.role}</span><AppButton label="Export workspace JSON" variant="ghost" size="sm" isLoading={exportingWorkspace} onClick={() => void exportWorkspace()} />{canWrite && <AppButton label="Workspace settings" variant="ghost" size="sm" onClick={() => { setWorkspaceTimeZoneDraft(activeWorkspace.timeZone); setWorkspaceSettingsOpen(true); setNotice(""); }} />}</div>}
@@ -650,7 +668,7 @@ function App() {
               </>}
             </>
           )}
-          </>}
+          </>; })()}
         </div>
       </main>
       {workspaceDialogOpen && <ModalDialog titleId="workspace-dialog-title" className="workspace-dialog" onClose={() => setWorkspaceDialogOpen(false)}>
@@ -840,7 +858,7 @@ function PageDetail({
   async function downloadRecoveryDraft() {
     if (!recoverableDraft) return;
     await getPlatform().saveFile(
-      `${node.title.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 80) || "page"}-local-draft.json`,
+      `${safeFilenameStem(node.title).slice(0, 80) || "page"}-local-draft.json`,
       JSON.stringify(recoverableDraft, null, 2),
       "application/json",
     );
@@ -876,7 +894,7 @@ function PageDetail({
         renderCalendar={(collectionId) => <CalendarView workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} collectionId={collectionId} onOpenNode={onOpenNode} />}
         onChange={queueSave}
         onExportMarkdown={(markdown) => {
-          const filename = node.title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+/g, "").replace(/-+$/g, "").slice(0, 80) || "page";
+          const filename = safeFilenameStem(node.title).replace(/^-+/g, "").replace(/-+$/g, "").slice(0, 80) || "page";
           void getPlatform().saveFile(`${filename}.md`, markdown, "text/markdown; charset=utf-8");
         }}
       /></Suspense> : <output className="loading document-loading">Opening your page…</output>}

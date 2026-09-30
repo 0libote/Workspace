@@ -114,7 +114,7 @@ export function CanvasView({ canvasId, workspaceId, csrfToken, editable, nodes, 
     const api = apiRef.current; const element = api?.getSceneElements().find((item) => item.id === selected);
     if (!api || !element || !search.trim()) return;
     setBusy(true);
-    try { const node = await onCreateNode(type, search.trim()); await linkNode(node); }
+    try { const node = await onCreateNode(type, search.trim()); linkNode(node); }
     finally { setBusy(false); }
   }
 
@@ -139,7 +139,7 @@ export function CanvasView({ canvasId, workspaceId, csrfToken, editable, nodes, 
     <header className="canvas-toolbar"><div><button type="button" onClick={onClose}>← All items</button><strong>Canvas</strong><output>{saveState}</output></div><button type="button" onClick={exportScene}>Export .excalidraw</button></header>
     <div className="canvas-workspace"><div className="canvas-editor"><Excalidraw excalidrawAPI={setExcalidrawApi} initialData={initialSceneRef.current as never} onChange={handleChange} viewModeEnabled={!editable} /></div>
     <aside className="canvas-inspector" aria-label="Canvas node inspector"><h2>Node link</h2>{linkedNode ? <><p>Linked to <strong>{linkedNode.title}</strong> · {linkedNode.type}</p><button type="button" onClick={() => onOpenNode(linkedNode)}>Open node</button>{editable && <button type="button" onClick={unlinkSelected}>Unlink</button>}</> : <p>Select a canvas element to link it to a workspace node.</p>}
-      {editable && <><label htmlFor="canvas-node-search">Link existing node</label><input id="canvas-node-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search nodes…" />{search.length > 1 && <ul>{visibleNodes.map((node) => <li key={node.id}><button disabled={busy} type="button" onClick={() => void linkNode(node)}>{node.title} · {node.type}</button></li>)}</ul>}
+      {editable && <><label htmlFor="canvas-node-search">Link existing node</label><input id="canvas-node-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search nodes…" />{search.length > 1 && <ul>{visibleNodes.map((node) => <li key={node.id}><button disabled={busy} type="button" onClick={() => linkNode(node)}>{node.title} · {node.type}</button></li>)}</ul>}
       <p>Convert the selected element using the text above as its title.</p><button type="button" disabled={busy || !selected || !search.trim()} onClick={() => void convertSelected("task")}>Create task from selection</button><button type="button" disabled={busy || !selected || !search.trim()} onClick={() => void convertSelected("page")}>Create page from selection</button></>}
     </aside></div>
   </section>;

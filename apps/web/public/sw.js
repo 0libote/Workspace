@@ -26,11 +26,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (!url.pathname.startsWith("/assets/") && !url.pathname.startsWith("/icons/") && url.pathname !== "/manifest.webmanifest") return;
-  event.respondWith(caches.match(request).then((cached) => {
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
     if (cached) return cached;
-    return fetch(request).then(async (response) => {
-      if (response.ok) await caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
-      return response;
-    });
-  }));
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  })());
 });

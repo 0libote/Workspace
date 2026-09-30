@@ -192,7 +192,7 @@ function compactUtcDateTime(instant: string): string {
 
 function compactCalendarDate(date: string): string {
   if (!isIsoCalendarDate(date)) throw new RangeError("Calendar event contains an invalid date.");
-  return date.replaceAll(/-/g, "");
+  return date.replaceAll("-", "");
 }
 
 /** Serializes canonical scheduled nodes as RFC 5545 iCalendar data. */

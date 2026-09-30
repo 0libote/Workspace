@@ -8,7 +8,7 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}
 function isBase64Url(value: string): boolean {
   if (value.length % 4 === 1) return false;
   for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
+    const code = value.codePointAt(index)!;
     const isAlphaNumeric = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
     if (!isAlphaNumeric && code !== 45 && code !== 95) return false;
   }
