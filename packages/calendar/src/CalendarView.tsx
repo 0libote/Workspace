@@ -174,7 +174,12 @@ export function CalendarView({ workspaceId, timeZone, csrfToken, editable, colle
     setAnchor((current) => {
     const next = new Date(current);
     if (mode === "month") next.setUTCMonth(next.getUTCMonth() + direction);
-    else next.setUTCDate(next.getUTCDate() + direction * (mode === "week" ? 7 : mode === "agenda" ? 14 : 1));
+    else {
+      let daysPerStep = 1;
+      if (mode === "week") daysPerStep = 7;
+      else if (mode === "agenda") daysPerStep = 14;
+      next.setUTCDate(next.getUTCDate() + direction * daysPerStep);
+    }
     return next;
     });
   };
@@ -217,7 +222,9 @@ export function CalendarView({ workspaceId, timeZone, csrfToken, editable, colle
           onDrop={(event) => { event.preventDefault(); const nodeId = event.dataTransfer.getData("text/plain"); if (editable && nodeId) void moveNode(nodeId, key); }}>
           <h3>{mode === "month" ? day.getUTCDate() : new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" }).format(day)}</h3>
           {dayEvents.map((event) => {
-            const eventDate = event.schedule.kind === "allDay" ? event.schedule.startDate : event.schedule.kind === "timed" ? formatInstantInTimeZone(event.schedule.startInstant, timeZone).slice(0, 10) : key;
+            let eventDate = key;
+            if (event.schedule.kind === "allDay") eventDate = event.schedule.startDate;
+            else if (event.schedule.kind === "timed") eventDate = formatInstantInTimeZone(event.schedule.startInstant, timeZone).slice(0, 10);
             return <div className="calendar-event-entry" key={event.node.id}>
               <button className="calendar-event" type="button" draggable={editable && movingNodeId !== event.node.id} onDragStart={(dragEvent) => { dragEvent.dataTransfer.setData("text/plain", event.node.id); }} onClick={() => onOpenNode(event.node)}>
                 <span>{event.node.title}</span>{event.schedule.kind === "timed" && <small>{formatInstantInTimeZone(event.schedule.startInstant, timeZone).slice(11)}</small>}

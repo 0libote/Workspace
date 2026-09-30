@@ -48,6 +48,31 @@ function pageSaveStateText(state: "saved" | "unsaved" | "saving" | "error"): str
   }
 }
 
+function nodeTypeIcon(type: string): string {
+  if (type === "task") return "◯";
+  if (type === "page") return "▤";
+  return "◇";
+}
+
+function collectionLayoutIcon(layout: SavedCollection["view"]["layout"]): string {
+  const icons: Record<SavedCollection["view"]["layout"], string> = {
+    board: "▥",
+    table: "▦",
+    calendar: "◷",
+    list: "☷",
+  };
+  return icons[layout];
+}
+
+function emptyNodeMessage(view: NodeView): string {
+  switch (view) {
+    case "all": return "Nothing here yet. Your first idea can go right above.";
+    case "task": return "No tasks yet. Add one above to get started.";
+    case "canvas": return "No canvases yet. Add one above to get started.";
+    default: return "No pages yet. Add one above to get started.";
+  }
+}
+
 interface LocalPageDraft {
   readonly baseRevision: number;
   readonly content: readonly JsonValue[];
@@ -581,12 +606,14 @@ function App() {
           ) : (
             <>
               <section className="welcome-banner"><div><div className="eyebrow">A LITTLE ROOM TO THINK</div><h2>Good work starts with a clear space.</h2><p>Keep the moving pieces connected, and let every idea find its place.</p></div><div className="banner-illustration" aria-hidden="true"><div className="sun" /><div className="hill hill-back" /><div className="hill hill-front" /><div className="banner-card">✳</div></div></section>
-          {activeView === "calendar" ? <CalendarView workspaceId={workspaceId} timeZone={activeWorkspace.timeZone} csrfToken={session.csrfToken} editable={canWrite} onOpenNode={openNodeFromCollection} /> : activeView === "graph" ? <GraphView workspaceId={workspaceId} nodes={activeNodes} onOpenNode={openNodeFromGraph} /> : <>
+          {activeView === "calendar" && <CalendarView workspaceId={workspaceId} timeZone={activeWorkspace.timeZone} csrfToken={session.csrfToken} editable={canWrite} onOpenNode={openNodeFromCollection} />}
+          {activeView === "graph" && <GraphView workspaceId={workspaceId} nodes={activeNodes} onOpenNode={openNodeFromGraph} />}
+          {activeView !== "calendar" && activeView !== "graph" && <>
               {notice && <output className="notice">{notice}</output>}
               {!canWrite && <p className="viewer-note">You have read-only access to this workspace.</p>}
               <section className="saved-collection-section" aria-labelledby="saved-collections-heading">
                 <div className="section-heading"><div><div className="eyebrow">REUSABLE NODE VIEWS</div><h2 id="saved-collections-heading">Collections</h2></div>{canWrite && <AppButton label="＋ New collection" variant="ghost" size="sm" onClick={() => { setCollectionBeingEdited(null); setNotice(""); setCollectionDialogOpen(true); }} />}</div>
-                {savedCollections.length > 0 ? <div className="saved-collection-list">{savedCollections.map((collection) => <div className="saved-collection-entry" key={collection.id}><button className="saved-collection-link" type="button" aria-label={`Open collection: ${collection.name}`} onClick={() => setOpenedCollection(collection)}><span aria-hidden="true">{collection.view.layout === "board" ? "▥" : collection.view.layout === "table" ? "▦" : collection.view.layout === "calendar" ? "◷" : "☷"}</span>{collection.name}</button>{canWrite && <><AppButton label={`Edit collection: ${collection.name}`} variant="ghost" size="sm" onClick={() => { setCollectionBeingEdited(collection); setNotice(""); setCollectionDialogOpen(true); }} /><AppButton label={`Delete collection: ${collection.name}`} variant="ghost" size="sm" onClick={() => void deleteCollection(collection)} /></>}</div>)}</div> : <p className="quiet-empty">Save a node filter as a reusable table, list, board, or calendar.</p>}
+                {savedCollections.length > 0 ? <div className="saved-collection-list">{savedCollections.map((collection) => <div className="saved-collection-entry" key={collection.id}><button className="saved-collection-link" type="button" aria-label={`Open collection: ${collection.name}`} onClick={() => setOpenedCollection(collection)}><span aria-hidden="true">{collectionLayoutIcon(collection.view.layout)}</span>{collection.name}</button>{canWrite && <><AppButton label={`Edit collection: ${collection.name}`} variant="ghost" size="sm" onClick={() => { setCollectionBeingEdited(collection); setNotice(""); setCollectionDialogOpen(true); }} /><AppButton label={`Delete collection: ${collection.name}`} variant="ghost" size="sm" onClick={() => void deleteCollection(collection)} /></>}</div>)}</div> : <p className="quiet-empty">Save a node filter as a reusable table, list, board, or calendar.</p>}
               </section>
               <section className="workspace-search" aria-label="Search workspace">
                 <label htmlFor="workspace-search-input">Search items and page content</label>
@@ -595,7 +622,7 @@ function App() {
               {searchQuery.trim().length >= 2 ? <section className="search-results" aria-label="Search results" aria-live="polite">
                 <div className="section-heading"><div><div className="eyebrow">WORKSPACE SEARCH</div><h2>Results for “{searchQuery.trim()}”</h2></div><span className="count-label">{searching ? "Searching…" : `${searchResult?.items.length ?? 0} results`}</span></div>
                 {searchError && <p className="notice" role="alert">{searchError}</p>}
-                {searchResult?.items.length ? <section className="item-list">{searchResult.items.map(({ node, matchedIn }) => <article className="item-row search-result-row" key={node.id}><span className={`type-icon type-${node.type}`} aria-hidden="true">{node.type === "task" ? "◯" : node.type === "page" ? "▤" : "◇"}</span><span className="item-title">{node.title}</span><span className="item-type">{node.type} · matched {matchedIn}</span>{node.type === "page" && <AppButton label="Open page" variant="ghost" size="sm" onClick={() => openPage(node)} />}{node.type === "task" && <AppButton label="Open task" variant="ghost" size="sm" onClick={() => setOpenedTask(node)} />}{canWrite && <AppButton label={`Archive ${node.title}`} variant="ghost" size="sm" onClick={() => void changeNode(node, "archive")} />}</article>)}</section> : !searching && <div className="quiet-empty"><span aria-hidden="true">⌕</span><p>No matching items. Try another phrase or item type.</p></div>}
+                {searchResult?.items.length ? <section className="item-list">{searchResult.items.map(({ node, matchedIn }) => <article className="item-row search-result-row" key={node.id}><span className={`type-icon type-${node.type}`} aria-hidden="true">{nodeTypeIcon(node.type)}</span><span className="item-title">{node.title}</span><span className="item-type">{node.type} · matched {matchedIn}</span>{node.type === "page" && <AppButton label="Open page" variant="ghost" size="sm" onClick={() => openPage(node)} />}{node.type === "task" && <AppButton label="Open task" variant="ghost" size="sm" onClick={() => setOpenedTask(node)} />}{canWrite && <AppButton label={`Archive ${node.title}`} variant="ghost" size="sm" onClick={() => void changeNode(node, "archive")} />}</article>)}</section> : !searching && <div className="quiet-empty"><span aria-hidden="true">⌕</span><p>No matching items. Try another phrase or item type.</p></div>}
                 {searchResult?.hasMore && <div className="search-more"><AppButton label="Load more results" variant="ghost" onClick={() => void loadMoreSearchResults()} isLoading={searching} /></div>}
               </section> : <>
               <section className="section-heading"><div><div className="eyebrow">YOUR WORKSPACE</div><h2>{viewTitle}</h2></div><span className="count-label">{visibleNodes.length} {visibleNodes.length === 1 ? "item" : "items"}</span></section>
@@ -604,7 +631,7 @@ function App() {
                 const statusValue = taskStatuses[node.id] ?? null;
                 const canComplete = taskStatusDefinition?.options.includes("Done") ?? false;
                 return <article className="item-row" key={node.id}>
-                  <span className={`type-icon type-${node.type}`} aria-hidden="true">{node.type === "task" ? "◯" : node.type === "page" ? "▤" : "◇"}</span>
+                  <span className={`type-icon type-${node.type}`} aria-hidden="true">{nodeTypeIcon(node.type)}</span>
                   <span className="item-title">{node.title}</span>
                   <span className="item-type">{node.type}</span>
                   {node.type === "task" && taskStatusDefinition && taskStatusDefinition.options.length > 0 && <div className="task-quick-status">
@@ -621,7 +648,7 @@ function App() {
                   {node.type === "task" && <AppButton label="Open task" variant="ghost" size="sm" onClick={() => { setNotice(""); setOpenedTask(node); }} />}
                   {canWrite && <AppButton label="Archive" variant="ghost" size="sm" onClick={() => void changeNode(node, "archive")} />}
                 </article>;
-              })}</section> : <div className="quiet-empty"><span aria-hidden="true">✧</span><p>{activeView === "all" ? "Nothing here yet. Your first idea can go right above." : `No ${activeView === "task" ? "tasks" : activeView === "canvas" ? "canvases" : "pages"} yet. Add one above to get started.`}</p></div>}
+              })}</section> : <div className="quiet-empty"><span aria-hidden="true">✧</span><p>{emptyNodeMessage(activeView)}</p></div>}
               {visibleArchivedNodes.length > 0 && <details className="archive-section"><summary>Archived items <span>{visibleArchivedNodes.length}</span></summary>{visibleArchivedNodes.map((node) => <article className="item-row archived" key={node.id}><span className="item-title">{node.title}</span>{canWrite && <AppButton label="Restore" variant="ghost" size="sm" onClick={() => void changeNode(node, "restore")} />}</article>)}</details>}
               </>}
               </>}

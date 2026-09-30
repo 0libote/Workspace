@@ -10,6 +10,12 @@ function openLabel(node: WorkspaceNode): string {
   return `Open ${node.type}: ${node.title}`;
 }
 
+function nodeTypeIcon(type: string): string {
+  if (type === "task") return "◯";
+  if (type === "page") return "▤";
+  return "◇";
+}
+
 function propertyValueText(property: NodeProperty | undefined): string {
   if (!property) return "Not set";
   const value = property.value.value;
@@ -257,8 +263,8 @@ export function CollectionDetail({
     />;
   }
 
-  const definitionLabel = (column: string) => definitions.find((definition) => definition.id === column)?.name ??
-    (column === "updatedAt" ? "Updated" : column === "createdAt" ? "Created" : column === "type" ? "Type" : "Title");
+  const standardColumnLabels: Readonly<Record<string, string>> = { updatedAt: "Updated", createdAt: "Created", type: "Type" };
+  const definitionLabel = (column: string) => definitions.find((definition) => definition.id === column)?.name ?? standardColumnLabels[column] ?? "Title";
   const openButton = (node: WorkspaceNode) => (node.type === "task" || node.type === "page")
     ? <AppButton label={openLabel(node)} variant="ghost" size="sm" onClick={() => openNode(node)} />
     : null;
@@ -273,7 +279,7 @@ export function CollectionDetail({
     <div className="collection-table-grid-cell" role="cell">{openButton(node)}</div>
   </div>;
   const renderListRow = (node: WorkspaceNode) => <article className="item-row">
-    <span className={`type-icon type-${node.type}`} aria-hidden="true">{node.type === "task" ? "◯" : node.type === "page" ? "▤" : "◇"}</span>
+    <span className={`type-icon type-${node.type}`} aria-hidden="true">{nodeTypeIcon(node.type)}</span>
     <span className="item-title">{renderColumn(node, "title")}</span>
     {extraColumns.map((column) => <span className="collection-list-field" key={column}><span>{definitionLabel(column)}: </span>{renderColumn(node, column)}</span>)}
     {openButton(node)}

@@ -39,9 +39,9 @@ export function projectNodeSchedule(input: {
   }
 
   if (hasTimedValue) {
-    const startInstantValue = input.start?.type === "dateTime" ? input.start.value
-      : input.due?.type === "dateTime" ? input.due.value
-        : null;
+    let startInstantValue: string | null = null;
+    if (input.start?.type === "dateTime") startInstantValue = input.start.value;
+    else if (input.due?.type === "dateTime") startInstantValue = input.due.value;
     if (startInstantValue === null) return null;
     const start = Date.parse(startInstantValue);
     if (!Number.isFinite(start)) return { kind: "invalid", reason: "invalidInstant" };
