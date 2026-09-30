@@ -199,7 +199,7 @@ export class PostgresNodeRepository implements NodeRepository {
     return this.updateExisting(workspaceId, nodeId, (node) => restoreNode(node, actorId, now));
   }
 
-  private async updateExisting(
+  private updateExisting(
     workspaceId: WorkspaceId,
     nodeId: NodeId,
     update: (node: WorkspaceNode) => WorkspaceNode,

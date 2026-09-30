@@ -89,7 +89,7 @@ export class PostgresRelationDefinitionRepository implements RelationDefinitionR
 export class PostgresNodeRelationRepository implements NodeRelationRepository {
   constructor(private readonly database: SQL) {}
 
-  async create(relation: NodeRelation): Promise<NodeRelation> {
+  create(relation: NodeRelation): Promise<NodeRelation> {
     return this.database.begin(async (transaction) => {
       const definitions = await transaction<{ allow_self_relation: boolean }[]>`
         SELECT allow_self_relation FROM relation_definitions

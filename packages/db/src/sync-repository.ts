@@ -37,7 +37,7 @@ export class PostgresSyncDocumentRepository implements SyncDocumentRepository {
     return { update: Y.diffUpdate(new Uint8Array(rows[0].state), input.stateVector), revision: rows[0].revision };
   }
 
-  async applyUpdate(input: ApplySyncDocumentUpdateInput): Promise<ApplySyncDocumentUpdateResult> {
+  applyUpdate(input: ApplySyncDocumentUpdateInput): Promise<ApplySyncDocumentUpdateResult> {
     const digest = new Bun.CryptoHasher("sha256").update(input.update).digest("hex");
     const initialState = emptyUpdate();
     return this.database.begin(async (transaction) => {

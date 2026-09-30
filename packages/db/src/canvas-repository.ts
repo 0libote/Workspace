@@ -52,7 +52,7 @@ export class PostgresNodeCanvasRepository implements NodeCanvasRepository {
     return row ? fromRow(row, await getBindings(this.database, workspaceId, nodeId)) : null;
   }
 
-  async save(input: SaveNodeCanvasInput): Promise<NodeCanvasDocument | null> {
+  save(input: SaveNodeCanvasInput): Promise<NodeCanvasDocument | null> {
     return this.database.begin(async (transaction) => {
       const rows = await transaction<CanvasRow[]>`
         INSERT INTO node_canvases (workspace_id, node_id, scene, revision, updated_at, updated_by)

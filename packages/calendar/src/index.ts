@@ -155,7 +155,7 @@ export interface CalendarEvent {
 }
 
 function escapeCalendarText(value: string): string {
-  return value.replace(/\\/g, String.raw`\\`).replace(/\r\n|\r|\n/g, String.raw`\n`).replace(/,/g, String.raw`\,`).replace(/;/g, String.raw`\;`);
+  return value.replaceAll(/\\/g, String.raw`\\`).replaceAll(/\r\n|\r|\n/g, String.raw`\n`).replaceAll(/,/g, String.raw`\,`).replaceAll(/;/g, String.raw`\;`);
 }
 
 const utf8Encoder = new TextEncoder();
@@ -187,7 +187,7 @@ function compactUtcDateTime(instant: string): string {
 
 function compactCalendarDate(date: string): string {
   if (!isIsoCalendarDate(date)) throw new RangeError("Calendar event contains an invalid date.");
-  return date.replace(/-/g, "");
+  return date.replaceAll(/-/g, "");
 }
 
 /** Serializes canonical scheduled nodes as RFC 5545 iCalendar data. */

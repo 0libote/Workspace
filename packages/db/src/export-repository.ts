@@ -91,7 +91,7 @@ interface ExportMembershipRow {
 export class PostgresWorkspaceExportRepository implements WorkspaceExportRepository {
   constructor(private readonly database: SQL) {}
 
-  async exportWorkspace(workspaceId: WorkspaceId, exportedAt: string): Promise<WorkspaceExport | null> {
+  exportWorkspace(workspaceId: WorkspaceId, exportedAt: string): Promise<WorkspaceExport | null> {
     return this.database.begin(async (transaction) => {
       await transaction.unsafe("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY").simple();
       const workspace = await new PostgresWorkspaceRepository(transaction).getById(workspaceId);

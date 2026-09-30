@@ -940,7 +940,7 @@ async function nodeCanvasOperation(
   const workspaceId = workspaceIdValue as WorkspaceId;
   await requireWorkspaceRole(database, workspaceId, session.user.id, request.method === "GET" ? "read" : "write");
   const node = await new PostgresNodeRepository(database).getById(workspaceId, nodeId);
-  if (!node || node.type !== "canvas") throw new HttpError(404, "canvas_not_found");
+  if (node?.type !== "canvas") throw new HttpError(404, "canvas_not_found");
   const repository = new PostgresNodeCanvasRepository(database);
   if (request.method === "GET") {
     const canvas = await repository.get(workspaceId, nodeId);
@@ -1056,7 +1056,7 @@ export function createAppHandler(database: SQL | null): (request: Request) => Pr
         const workspaceId = workspaceIdValue as WorkspaceId;
         await requireWorkspaceRole(database, workspaceId, session.user.id, request.method === "GET" ? "read" : "write");
         const node = await new PostgresNodeRepository(database).getById(workspaceId, nodeId);
-        if (!node || node.type !== "page") throw new HttpError(404, "page_not_found");
+        if (node?.type !== "page") throw new HttpError(404, "page_not_found");
         const repository = new PostgresNodeDocumentRepository(database);
         if (request.method === "GET") {
           const document = await repository.get(workspaceId, nodeId);

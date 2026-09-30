@@ -313,7 +313,7 @@ export class SyncConnection {
   private flush(): Promise<void> {
     this.sendChain = this.sendChain.then(async () => {
       const socket = this.socket;
-      if (!socket || socket.readyState !== OPEN || !this.joined || this.stopped) return;
+      if (socket?.readyState !== OPEN || !this.joined || this.stopped) return;
       const result = await this.queue.flush(this.options.workspaceId, this.options.nodeId, async (mutation) => {
         if (socket !== this.socket || socket.readyState !== OPEN) return false;
         const acknowledged = new Promise<boolean>((resolve, reject) => this.acknowledgements.set(mutation.mutationId, { resolve, reject }));
