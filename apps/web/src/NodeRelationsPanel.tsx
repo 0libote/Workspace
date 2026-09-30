@@ -141,7 +141,7 @@ export function NodeRelationsPanel({
   return <section className="node-relations" aria-labelledby={`connections-${node.id}`}>
     <div className="node-relations-heading"><div><div className="eyebrow">SHARED NODES</div><h2 id={`connections-${node.id}`}>Connections</h2></div>{editable && <AppButton label="＋ Connection type" variant="ghost" size="sm" onClick={() => setDefinitionDialog(true)} />}</div>
     {error && !definitionDialog && <p className="notice" role="alert">{error}</p>}
-    {loading ? <p className="loading" role="status">Loading connections…</p> : <>
+    {loading ? <output className="loading">Loading connections…</output> : <>
       {editable && definitions.length > 0 && nodes.some((item) => item.id !== node.id && !item.archivedAt) && <form className="relation-create-form" onSubmit={(event) => void createLink(event)}>
         <label><span>Connection</span><select name="type" aria-label="Connection type" required defaultValue={definitions[0]?.type}>{definitions.map((definition) => <option value={definition.type} key={definition.id}>{definition.fromLabel}</option>)}</select></label>
         <label><span>Item</span><select name="toNodeId" aria-label="Connect to item" required defaultValue=""><option value="" disabled>Choose an item</option>{nodes.filter((item) => item.id !== node.id && !item.archivedAt).map((item) => <option value={item.id} key={item.id}>{item.title} · {item.type}</option>)}</select></label>

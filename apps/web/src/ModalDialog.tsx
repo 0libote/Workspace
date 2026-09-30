@@ -22,7 +22,6 @@ export function ModalDialog({ titleId, className, onClose, children }: ModalDial
     className="workspace-dialog-scrim"
     aria-labelledby={titleId}
     onCancel={(event) => { event.preventDefault(); onClose(); }}
-    onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
   >
     <section className={className}>{children}</section>
   </dialog>;

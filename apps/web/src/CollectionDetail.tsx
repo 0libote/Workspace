@@ -283,7 +283,7 @@ export function CollectionDetail({
     if (collection.view.layout === "calendar") {
       return <CalendarView workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} collectionId={collection.id} onOpenNode={onOpenNode} />;
     }
-    if (loading && items.length === 0) return <p className="loading" role="status">Loading collection…</p>;
+    if (loading && items.length === 0) return <output className="loading">Loading collection…</output>;
     if (items.length === 0) return <div className="quiet-empty"><span aria-hidden="true">▦</span><p>No nodes match this collection yet.</p></div>;
     if (collection.view.layout === "table") {
       return <VirtualizedRecords items={items} role="table" label="Collection table" estimateSize={52} getKey={(node) => node.id} header={tableHeader} renderItem={renderTableRow} />;

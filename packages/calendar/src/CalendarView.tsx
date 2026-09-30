@@ -206,13 +206,13 @@ export function CalendarView({ workspaceId, timeZone, csrfToken, editable, colle
       {appliedRange && <button type="button" onClick={() => { setAppliedRange(null); setRangeDraft(null); }}>Clear range</button>}
     </form>
     <p className="calendar-zone">Times shown in {timeZone}{loading ? " · Loading…" : ""}</p>
-    {error && <p className="notice" role="status">{error}</p>}
+    {error && <output className="notice">{error}</output>}
     <div className={`calendar-grid calendar-grid-${mode}`}>
       {mode === "month" && ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((weekday) => <div className="calendar-weekday" key={weekday}>{weekday}</div>)}
       {days.map((day) => {
         const key = dateKey(day);
         const dayEvents = eventsByDate.get(key) ?? [];
-        return <section className="calendar-day" role="group" aria-label={new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeZone: "UTC" }).format(day)} key={key}
+        return <section className="calendar-day" aria-label={new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeZone: "UTC" }).format(day)} key={key}
           onDragOver={(event) => { if (editable) event.preventDefault(); }}
           onDrop={(event) => { event.preventDefault(); const nodeId = event.dataTransfer.getData("text/plain"); if (editable && nodeId) void moveNode(nodeId, key); }}>
           <h3>{mode === "month" ? day.getUTCDate() : new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" }).format(day)}</h3>

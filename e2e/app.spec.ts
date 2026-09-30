@@ -141,7 +141,7 @@ test("sign in and create a node through the workspace interface", async ({ page 
   }, nextDate);
   const dragTargetLabel = await page.evaluate((date) => new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeZone: "UTC" }).format(new Date(`${date}T00:00:00.000Z`)), dragTargetDate);
   const movedByDrop = page.waitForResponse((response) => response.url().includes(`/api/calendar/${scheduledNodeId}/move?`) && response.request().method() === "PATCH", { timeout: 10_000 });
-  await page.getByRole("button", { name: title }).dragTo(page.getByRole("group", { name: dragTargetLabel }), { targetPosition: { x: 30, y: 70 }, steps: 8 });
+  await page.getByRole("button", { name: title }).dragTo(page.getByRole("region", { name: dragTargetLabel }), { targetPosition: { x: 30, y: 70 }, steps: 8 });
   expect((await movedByDrop).status()).toBe(200);
   await expect(moveDateField).toHaveValue(dragTargetDate);
   calendarMovedDate = dragTargetDate;
@@ -164,7 +164,7 @@ test("sign in and create a node through the workspace interface", async ({ page 
   await moveDateField.fill(failedMoveDate);
   await expect(moveDateField).toHaveValue(failedMoveDate);
   await expect(moveDateField).toHaveValue(calendarMovedDate);
-  await expect(page.locator(".calendar-view .notice[role='status']")).toBeVisible();
+  await expect(page.locator(".calendar-view output.notice")).toBeVisible();
   await page.unroute("**/api/calendar/*/move?*");
   await page.getByRole("link", { name: "All items" }).click();
 
@@ -516,7 +516,7 @@ test("create and reopen an Excalidraw canvas from the workspace interface", asyn
   await expect(page.getByRole("region", { name: "Canvas editor" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Export .excalidraw" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Node link" })).toBeVisible();
-  await expect(page.locator(".canvas-toolbar [role=status]")).toHaveText("Saved", { timeout: 20_000 });
+  await expect(page.locator(".canvas-toolbar output")).toHaveText("Saved", { timeout: 20_000 });
 });
 
 test("explore a focused workspace graph", async ({ page }) => {

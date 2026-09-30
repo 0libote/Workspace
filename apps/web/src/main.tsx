@@ -533,7 +533,7 @@ function App() {
             <>
               <section className="welcome-banner"><div><div className="eyebrow">A LITTLE ROOM TO THINK</div><h2>Good work starts with a clear space.</h2><p>Keep the moving pieces connected, and let every idea find its place.</p></div><div className="banner-illustration" aria-hidden="true"><div className="sun" /><div className="hill hill-back" /><div className="hill hill-front" /><div className="banner-card">✳</div></div></section>
           {activeView === "calendar" ? <CalendarView workspaceId={workspaceId} timeZone={activeWorkspace.timeZone} csrfToken={session.csrfToken} editable={canWrite} onOpenNode={(node) => node.type === "page" ? openPage(node) : node.type === "task" ? setOpenedTask(node) : setNotice(`Open ${node.type} items from the workspace list.`)} /> : activeView === "graph" ? <GraphView workspaceId={workspaceId} nodes={activeNodes} onOpenNode={(node) => node.type === "page" ? openPage(node) : node.type === "task" ? setOpenedTask(node) : node.type === "canvas" ? setOpenedCanvas(node) : setNotice(`Open ${node.type} items from the workspace list.`)} /> : <>
-              {notice && <p className="notice" role="status">{notice}</p>}
+              {notice && <output className="notice">{notice}</output>}
               {!canWrite && <p className="viewer-note">You have read-only access to this workspace.</p>}
               <section className="saved-collection-section" aria-labelledby="saved-collections-heading">
                 <div className="section-heading"><div><div className="eyebrow">REUSABLE NODE VIEWS</div><h2 id="saved-collections-heading">Collections</h2></div>{canWrite && <AppButton label="＋ New collection" variant="ghost" size="sm" onClick={() => { setCollectionBeingEdited(null); setNotice(""); setCollectionDialogOpen(true); }} />}</div>
@@ -789,15 +789,15 @@ function PageDetail({
     <section className="page-detail" aria-label={`Page: ${node.title}`}>
       <div className="page-detail-toolbar">
         <AppButton label="Back to items" variant="ghost" onClick={() => void closePage()} />
-        <span className={`document-save-state state-${saveState}`} role="status">
+        <output className={`document-save-state state-${saveState}`}>
           {saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved changes" : saveState === "error" ? "Save needs attention" : "All changes saved"}
-        </span>
+        </output>
         {saveState === "error" && pendingContent.current && editable && <AppButton label="Retry save" variant="ghost" size="sm" onClick={() => { saveFailed.current = false; void flushSave(); }} />}
       </div>
       {saveError && <p className="notice" role="alert">{saveError}</p>}
       {recoverableDraft && <section className="draft-recovery" aria-label="Preserved local draft"><div><strong>Local draft preserved</strong><p>Saved {new Date(recoverableDraft.savedAt).toLocaleString()} from revision {recoverableDraft.baseRevision}. The server copy has changed, so this draft was not applied.</p></div><div className="draft-recovery-actions"><AppButton label="Download draft" variant="ghost" size="sm" onClick={downloadRecoveryDraft} /><AppButton label="Discard draft" variant="ghost" size="sm" onClick={discardRecoveryDraft} /></div></section>}
       <h1 className="document-title">{node.title}</h1>
-      {document ? <Suspense fallback={<p className="loading document-loading" role="status">Loading editor…</p>}><PageEditor
+      {document ? <Suspense fallback={<output className="loading document-loading">Loading editor…</output>}><PageEditor
         initialContent={document.content}
         editable={editable}
         calendarCollections={savedCollections.filter((collection) => collection.view.layout === "calendar").map(({ id, name }) => ({ id, name }))}
@@ -807,7 +807,7 @@ function PageDetail({
           const filename = node.title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+/g, "").replace(/-+$/g, "").slice(0, 80) || "page";
           void getPlatform().saveFile(`${filename}.md`, markdown, "text/markdown; charset=utf-8");
         }}
-      /></Suspense> : <p className="loading document-loading" role="status">Opening your page…</p>}
+      /></Suspense> : <output className="loading document-loading">Opening your page…</output>}
       {!editable && <p className="viewer-note">You have read-only access to this page.</p>}
       <NodeRelationsPanel node={node} nodes={nodes} workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} onOpen={onOpenNode} />
     </section>
@@ -958,10 +958,10 @@ function TaskDetail({
   }
 
   return <section className="task-detail" aria-label={`Task: ${node.title}`}>
-    <div className="page-detail-toolbar"><AppButton label="Back to items" variant="ghost" onClick={onClose} /><span className="document-save-state" role="status">{savingId ? `Saving ${definitions.find((item) => item.id === savingId)?.name.toLowerCase()}…` : saved ? `${saved} saved` : "Task details"}</span></div>
+    <div className="page-detail-toolbar"><AppButton label="Back to items" variant="ghost" onClick={onClose} /><output className="document-save-state">{savingId ? `Saving ${definitions.find((item) => item.id === savingId)?.name.toLowerCase()}…` : saved ? `${saved} saved` : "Task details"}</output></div>
     <div className="task-heading"><div><div className="eyebrow">TASK</div><h1 className="document-title">{node.title}</h1></div>{editable && <AppButton label="＋ Add property" variant="ghost" size="sm" onClick={() => { setError(""); setPropertyDialogOpen(true); }} />}</div>
     {error && !propertyDialogOpen && <p className="notice" role="alert">{error}</p>}
-    {loading ? <p className="loading document-loading" role="status">Loading task details…</p> : <div className="task-properties">{definitions.map((definition) => <label className="task-property" key={definition.id}><span>{definition.name}</span>{renderPropertyEditor(definition)}</label>)}{definitions.length === 0 && <p className="quiet-empty">No task properties are available in this workspace.</p>}</div>}
+    {loading ? <output className="loading document-loading">Loading task details…</output> : <div className="task-properties">{definitions.map((definition) => <label className="task-property" key={definition.id}><span>{definition.name}</span>{renderPropertyEditor(definition)}</label>)}{definitions.length === 0 && <p className="quiet-empty">No task properties are available in this workspace.</p>}</div>}
     {!editable && <p className="viewer-note">You have read-only access to this task.</p>}
     <NodeRelationsPanel node={node} nodes={nodes} workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} onOpen={onOpenNode} />
     {propertyDialogOpen && <ModalDialog titleId="property-dialog-title" className="workspace-dialog" onClose={() => setPropertyDialogOpen(false)}><div className="eyebrow">WORKSPACE PROPERTY</div><h2 id="property-dialog-title">Add a property</h2><form onSubmit={(event) => void createProperty(event)}><label htmlFor="property-name">Name</label><input autoFocus id="property-name" name="name" required maxLength={120} placeholder="e.g. Estimate" /><label htmlFor="property-type">Type</label><select id="property-type" value={newPropertyType} onChange={(event) => setNewPropertyType(event.target.value)}><option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes or no</option><option value="date">Date</option><option value="dateTime">Date and time</option><option value="select">Select</option><option value="multiSelect">Multiple select</option><option value="status">Status</option><option value="duration">Duration</option><option value="email">Email</option><option value="url">URL</option><option value="phone">Phone</option></select>{["select", "multiSelect", "status"].includes(newPropertyType) && <><label htmlFor="property-options">Options, separated by commas</label><input id="property-options" name="options" required placeholder="e.g. Small, Medium, Large" /></>}{error && <p className="notice" role="alert">{error}</p>}<div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setPropertyDialogOpen(false)} /><AppButton label="Add property" variant="primary" type="submit" /></div></form></ModalDialog>}
