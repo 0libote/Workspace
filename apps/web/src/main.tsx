@@ -87,6 +87,14 @@ function safeFilenameStem(value: string): string {
   return result;
 }
 
+function trimFilenameSeparators(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (value[start] === "-") start += 1;
+  while (end > start && value[end - 1] === "-") end -= 1;
+  return value.slice(start, end);
+}
+
 interface LocalPageDraft {
   readonly baseRevision: number;
   readonly content: readonly JsonValue[];
@@ -907,7 +915,7 @@ function PageDetail({
         renderCalendar={(collectionId) => <CalendarView workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} collectionId={collectionId} onOpenNode={onOpenNode} />}
         onChange={queueSave}
         onExportMarkdown={(markdown) => {
-          const filename = safeFilenameStem(node.title).replace(/^-+/g, "").replace(/-+$/g, "").slice(0, 80) || "page";
+          const filename = trimFilenameSeparators(safeFilenameStem(node.title)).slice(0, 80) || "page";
           void getPlatform().saveFile(`${filename}.md`, markdown, "text/markdown; charset=utf-8");
         }}
       /></Suspense> : <output className="loading document-loading">Opening your page…</output>}
