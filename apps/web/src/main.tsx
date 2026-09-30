@@ -25,12 +25,8 @@ type NodeView = "all" | "task" | "page" | "calendar" | "canvas" | "graph";
 const PageEditor = lazy(() => import("@workspace/editor").then(({ PageEditor: Editor }) => ({ default: Editor })));
 
 function stringPropertyValue(type: "text" | "email" | "url" | "phone", value: string): PropertyValue {
-  switch (type) {
-    case "text": return { type, value };
-    case "email": return { type, value };
-    case "url": return { type, value };
-    case "phone": return { type, value };
-  }
+  // These four property variants all carry strings; the type argument preserves their discriminant.
+  return { type, value } as PropertyValue;
 }
 
 function propertyDisplayValue(value: unknown): string {
@@ -661,7 +657,7 @@ function App() {
           <div className="eyebrow">YOUR SPACE</div><h2 id="workspace-dialog-title">Create a workspace</h2>
           <form onSubmit={(event) => void createWorkspace(event)}>
             <label htmlFor="new-workspace-name">Workspace name</label>
-            <input autoFocus id="new-workspace-name" name="name" placeholder="e.g. Personal" required maxLength={120} />
+            <input id="new-workspace-name" name="name" placeholder="e.g. Personal" required maxLength={120} />
             <label htmlFor="new-workspace-time-zone">Time zone</label>
             <input id="new-workspace-time-zone" name="timeZone" defaultValue={Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"} required maxLength={100} />
             {notice && <p className="notice" role="alert">{notice}</p>}
@@ -672,7 +668,7 @@ function App() {
           <div className="eyebrow">WORKSPACE SETTINGS</div><h2 id="workspace-settings-title">Time zone</h2>
           <form onSubmit={(event) => void saveWorkspaceSettings(event)}>
             <label htmlFor="workspace-time-zone">IANA time zone</label>
-            <input autoFocus id="workspace-time-zone" value={workspaceTimeZoneDraft} onChange={(event) => setWorkspaceTimeZoneDraft(event.target.value)} required maxLength={100} placeholder="Europe/London" />
+            <input id="workspace-time-zone" value={workspaceTimeZoneDraft} onChange={(event) => setWorkspaceTimeZoneDraft(event.target.value)} required maxLength={100} placeholder="Europe/London" />
             <p className="quiet-empty">Calendar dates and times display in this zone. Saved dates and instants will not change.</p>
             {notice && <p className="notice" role="alert">{notice}</p>}
             <div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setWorkspaceSettingsOpen(false)} /><AppButton label="Save time zone" variant="primary" type="submit" isLoading={savingWorkspaceSettings} /></div>
@@ -681,7 +677,7 @@ function App() {
       {collectionDialogOpen && <ModalDialog titleId="collection-dialog-title" className="workspace-dialog collection-dialog" onClose={() => setCollectionDialogOpen(false)}>
           <div className="eyebrow">SAVED NODE VIEW</div><h2 id="collection-dialog-title">{collectionBeingEdited ? "Edit collection" : "Create a collection"}</h2>
           <form onSubmit={(event) => void createCollection(event)}>
-            <label htmlFor="collection-name">Name</label><input autoFocus id="collection-name" name="name" required maxLength={120} placeholder="e.g. Active projects" defaultValue={collectionBeingEdited?.name ?? ""} />
+            <label htmlFor="collection-name">Name</label><input id="collection-name" name="name" required maxLength={120} placeholder="e.g. Active projects" defaultValue={collectionBeingEdited?.name ?? ""} />
             <fieldset className="collection-type-filter"><legend>Filter by item type</legend><div className="collection-filter-types">{[...new Set([...nodes.map(({ type }) => type), ...(collectionBeingEdited?.query.types ?? [])])].map((type) => <label key={type}><input type="checkbox" name="types" value={type} defaultChecked={collectionBeingEdited?.query.types.includes(type) ?? false} />{type}</label>)}</div></fieldset>
             <label htmlFor="collection-title-filter">Title contains</label><input id="collection-title-filter" name="titleContains" maxLength={120} placeholder="Optional words in the title" defaultValue={collectionBeingEdited?.query.titleContains ?? ""} />
             <fieldset className="collection-columns"><legend>Columns</legend><p>Title is always included.</p><div className="collection-filter-types">
@@ -1051,11 +1047,11 @@ function TaskDetail({
     {loading ? <output className="loading document-loading">Loading task details…</output> : <div className="task-properties">{definitions.map((definition) => <label className="task-property" key={definition.id}><span>{definition.name}</span>{renderPropertyEditor(definition)}</label>)}{definitions.length === 0 && <p className="quiet-empty">No task properties are available in this workspace.</p>}</div>}
     {!editable && <p className="viewer-note">You have read-only access to this task.</p>}
     <NodeRelationsPanel node={node} nodes={nodes} workspaceId={workspaceId} timeZone={timeZone} csrfToken={csrfToken} editable={editable} onOpen={onOpenNode} />
-    {propertyDialogOpen && <ModalDialog titleId="property-dialog-title" className="workspace-dialog" onClose={() => setPropertyDialogOpen(false)}><div className="eyebrow">WORKSPACE PROPERTY</div><h2 id="property-dialog-title">Add a property</h2><form onSubmit={(event) => void createProperty(event)}><label htmlFor="property-name">Name</label><input autoFocus id="property-name" name="name" required maxLength={120} placeholder="e.g. Estimate" /><label htmlFor="property-type">Type</label><select id="property-type" value={newPropertyType} onChange={(event) => setNewPropertyType(event.target.value)}><option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes or no</option><option value="date">Date</option><option value="dateTime">Date and time</option><option value="select">Select</option><option value="multiSelect">Multiple select</option><option value="status">Status</option><option value="duration">Duration</option><option value="email">Email</option><option value="url">URL</option><option value="phone">Phone</option></select>{["select", "multiSelect", "status"].includes(newPropertyType) && <><label htmlFor="property-options">Options, separated by commas</label><input id="property-options" name="options" required placeholder="e.g. Small, Medium, Large" /></>}{error && <p className="notice" role="alert">{error}</p>}<div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setPropertyDialogOpen(false)} /><AppButton label="Add property" variant="primary" type="submit" /></div></form></ModalDialog>}
+    {propertyDialogOpen && <ModalDialog titleId="property-dialog-title" className="workspace-dialog" onClose={() => setPropertyDialogOpen(false)}><div className="eyebrow">WORKSPACE PROPERTY</div><h2 id="property-dialog-title">Add a property</h2><form onSubmit={(event) => void createProperty(event)}><label htmlFor="property-name">Name</label><input id="property-name" name="name" required maxLength={120} placeholder="e.g. Estimate" /><label htmlFor="property-type">Type</label><select id="property-type" value={newPropertyType} onChange={(event) => setNewPropertyType(event.target.value)}><option value="text">Text</option><option value="number">Number</option><option value="boolean">Yes or no</option><option value="date">Date</option><option value="dateTime">Date and time</option><option value="select">Select</option><option value="multiSelect">Multiple select</option><option value="status">Status</option><option value="duration">Duration</option><option value="email">Email</option><option value="url">URL</option><option value="phone">Phone</option></select>{["select", "multiSelect", "status"].includes(newPropertyType) && <><label htmlFor="property-options">Options, separated by commas</label><input id="property-options" name="options" required placeholder="e.g. Small, Medium, Large" /></>}{error && <p className="notice" role="alert">{error}</p>}<div className="workspace-dialog-actions"><AppButton label="Cancel" variant="ghost" type="button" onClick={() => setPropertyDialogOpen(false)} /><AppButton label="Add property" variant="primary" type="submit" /></div></form></ModalDialog>}
   </section>;
 }
 
-function AuthScreen({ setupRequired, busy, notice, onSubmit }: { setupRequired: boolean; busy: boolean; notice: string; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function AuthScreen({ setupRequired, busy, notice, onSubmit }: { readonly setupRequired: boolean; readonly busy: boolean; readonly notice: string; readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   return <main className="auth-page"><section className="auth-card"><a className="brand auth-brand" href="/" aria-label="Commonplace home"><span className="brand-mark">c</span><span>commonplace</span></a><div className="auth-art" aria-hidden="true"><div className="auth-orbit orbit-one" /><div className="auth-orbit orbit-two" /><span className="auth-star">✳</span><span className="auth-spark">✧</span></div><div className="eyebrow">A SPACE FOR WHAT’S NEXT</div><h1>{setupRequired ? "Make yourself at home." : "Welcome back."}</h1><p className="auth-subtitle">{setupRequired ? "Set up your owner account and begin shaping your workspace." : "Sign in to pick up where your thoughts left off."}</p><form className="auth-form" onSubmit={onSubmit}>{setupRequired && <><label htmlFor="displayName">Your name</label><input id="displayName" name="displayName" autoComplete="name" placeholder="How should we address you?" required maxLength={120} /><label htmlFor="workspaceName">Workspace name</label><input id="workspaceName" name="workspaceName" placeholder="e.g. Personal" required maxLength={120} /></>}<label htmlFor="email">Email address</label><input id="email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={320} /><label htmlFor="password">Password</label><input id="password" name="password" type="password" autoComplete={setupRequired ? "new-password" : "current-password"} placeholder={setupRequired ? "At least 12 characters" : "Your password"} required minLength={setupRequired ? 12 : 1} maxLength={256} />{notice && <p className="notice" role="alert">{notice}</p>}<AppButton label={setupRequired ? "Create owner account" : "Sign in"} variant="primary" type="submit" isLoading={busy} /></form><p className="auth-footnote">Your data stays on your server.</p></section><footer className="auth-footer">A thoughtful home for your connected work <span>✳</span></footer></main>;
 }
 

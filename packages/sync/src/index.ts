@@ -88,7 +88,7 @@ export function encodeSyncBytes(bytes: Uint8Array): string {
   for (let offset = 0; offset < bytes.byteLength; offset += chunkSize) {
     binary += String.fromCodePoint(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.byteLength)));
   }
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, "");
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
 export function decodeSyncBytes(encoded: string): Uint8Array {

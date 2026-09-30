@@ -92,7 +92,7 @@ export function CanvasView({ canvasId, workspaceId, csrfToken, editable, nodes, 
     return () => window.clearTimeout(timer);
   }, [scene, bindings, stored, canvasId, workspaceId, csrfToken, editable, loadKey]);
 
-  async function linkNode(node: CanvasNode) {
+  function linkNode(node: CanvasNode) {
     const api = apiRef.current;
     if (!api || !selected) return;
     setBusy(true);

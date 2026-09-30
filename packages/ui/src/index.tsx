@@ -3,10 +3,10 @@ import { Button as AstryxButton, type ButtonProps } from "@astryxdesign/core/But
 import { Theme } from "@astryxdesign/core/theme";
 import { neutralTheme } from "@astryxdesign/theme-neutral/built";
 
-export function AppTheme({ children }: { children: ReactNode }) {
+export function AppTheme({ children }: { readonly children: ReactNode }) {
   return <Theme theme={neutralTheme} mode="light">{children}</Theme>;
 }
 
-export function AppButton(props: ButtonProps) {
+export function AppButton(props: Readonly<ButtonProps>) {
   return <AstryxButton {...props} />;
 }
