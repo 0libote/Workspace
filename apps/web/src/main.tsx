@@ -24,6 +24,30 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 type NodeView = "all" | "task" | "page" | "calendar" | "canvas" | "graph";
 const PageEditor = lazy(() => import("@workspace/editor").then(({ PageEditor: Editor }) => ({ default: Editor })));
 
+function stringPropertyValue(type: "text" | "email" | "url" | "phone", value: string): PropertyValue {
+  switch (type) {
+    case "text": return { type, value };
+    case "email": return { type, value };
+    case "url": return { type, value };
+    case "phone": return { type, value };
+  }
+}
+
+function propertyDisplayValue(value: unknown): string {
+  if (value === undefined) return "Not set";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value) ?? "";
+}
+
+function pageSaveStateText(state: "saved" | "unsaved" | "saving" | "error"): string {
+  switch (state) {
+    case "saved": return "All changes saved";
+    case "unsaved": return "Unsaved changes";
+    case "saving": return "Saving…";
+    case "error": return "Save needs attention";
+  }
+}
+
 interface LocalPageDraft {
   readonly baseRevision: number;
   readonly content: readonly JsonValue[];
@@ -427,6 +451,23 @@ function App() {
     setOpenedPage(node);
   }
 
+  function openNodeFromCollection(node: WorkspaceNode) {
+    switch (node.type) {
+      case "page": openPage(node); break;
+      case "task": setOpenedTask(node); break;
+      default: setNotice(`Open ${node.type} items from the workspace list.`);
+    }
+  }
+
+  function openNodeFromGraph(node: WorkspaceNode) {
+    switch (node.type) {
+      case "page": openPage(node); break;
+      case "task": setOpenedTask(node); break;
+      case "canvas": setOpenedCanvas(node); break;
+      default: setNotice(`Open ${node.type} items from the workspace list.`);
+    }
+  }
+
   async function logout() {
     if (!session) return;
     await apiRequest<void>("/api/auth/logout", { method: "POST", headers: { "x-csrf-token": session.csrfToken } });
@@ -447,7 +488,15 @@ function App() {
   const archivedNodes = nodes.filter((node) => node.archivedAt);
   const visibleNodes = activeView === "all" || activeView === "calendar" ? activeNodes : activeNodes.filter((node) => node.type === activeView);
   const visibleArchivedNodes = activeView === "all" || activeView === "calendar" ? archivedNodes : archivedNodes.filter((node) => node.type === activeView);
-  const viewTitle = activeView === "all" ? "Everything in one place" : activeView === "task" ? "Tasks" : activeView === "page" ? "Pages" : activeView === "calendar" ? "Calendar" : activeView === "canvas" ? "Canvas" : "Graph";
+  const viewTitles: Record<NodeView, string> = {
+    all: "Everything in one place",
+    task: "Tasks",
+    page: "Pages",
+    calendar: "Calendar",
+    canvas: "Canvas",
+    graph: "Graph",
+  };
+  const viewTitle = viewTitles[activeView];
 
   return (
     <div className="app-frame">
@@ -495,7 +544,7 @@ function App() {
               csrfToken={session.csrfToken}
               editable={canWrite}
               nodes={activeNodes}
-              onOpenNode={(node) => node.type === "page" ? openPage(node) : node.type === "task" ? setOpenedTask(node) : setNotice(`Open ${node.type} items from the workspace list.`)}
+              onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedTask(null)}
             />
           ) : openedPage ? (
@@ -508,7 +557,7 @@ function App() {
               editable={activeWorkspace?.role !== "viewer"}
               nodes={activeNodes}
               savedCollections={savedCollections}
-              onOpenNode={(node) => node.type === "page" ? openPage(node) : node.type === "task" ? setOpenedTask(node) : setNotice(`Open ${node.type} items from the workspace list.`)}
+              onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedPage(null)}
             />
           ) : openedCollection ? (
@@ -519,7 +568,7 @@ function App() {
               timeZone={activeWorkspace?.timeZone ?? "UTC"}
               csrfToken={session.csrfToken}
               editable={canWrite}
-              onOpenNode={(node) => node.type === "page" ? openPage(node) : node.type === "task" ? setOpenedTask(node) : setNotice(`Open ${node.type} items from the workspace list.`)}
+              onOpenNode={openNodeFromCollection}
               onClose={() => setOpenedCollection(null)}
             />
           ) : <>
@@ -532,7 +581,7 @@ function App() {
           ) : (
             <>
               <section className="welcome-banner"><div><div className="eyebrow">A LITTLE ROOM TO THINK</div><h2>Good work starts with a clear space.</h2><p>Keep the moving pieces connected, and let every idea find its place.</p></div><div className="banner-illustration" aria-hidden="true"><div className="sun" /><div className="hill hill-back" /><div className="hill hill-front" /><div className="banner-card">✳</div></div></section>
-          {activeView === "calendar" ? <CalendarView workspaceId={workspaceId} timeZone={activeWorkspace.timeZone} csrfToken={session.csrfToken} editable={canWrite} onOpenNode={(node) => node.type === "page" ? openPage(node) : node.type === "task" ? setOpenedTask(node) : setNotice(`Open ${node.type} items from the workspace list.`)} /> : activeView === "graph" ? <GraphView workspaceId={workspaceId} nodes={activeNodes} onOpenNode={(node) => node.type === "page" ? openPage(node) : node.type === "task" ? setOpenedTask(node) : node.type === "canvas" ? setOpenedCanvas(node) : setNotice(`Open ${node.type} items from the workspace list.`)} /> : <>
+          {activeView === "calendar" ? <CalendarView workspaceId={workspaceId} timeZone={activeWorkspace.timeZone} csrfToken={session.csrfToken} editable={canWrite} onOpenNode={openNodeFromCollection} /> : activeView === "graph" ? <GraphView workspaceId={workspaceId} nodes={activeNodes} onOpenNode={openNodeFromGraph} /> : <>
               {notice && <output className="notice">{notice}</output>}
               {!canWrite && <p className="viewer-note">You have read-only access to this workspace.</p>}
               <section className="saved-collection-section" aria-labelledby="saved-collections-heading">
@@ -790,7 +839,7 @@ function PageDetail({
       <div className="page-detail-toolbar">
         <AppButton label="Back to items" variant="ghost" onClick={() => void closePage()} />
         <output className={`document-save-state state-${saveState}`}>
-          {saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved changes" : saveState === "error" ? "Save needs attention" : "All changes saved"}
+          {pageSaveStateText(saveState)}
         </output>
         {saveState === "error" && pendingContent.current && editable && <AppButton label="Retry save" variant="ghost" size="sm" onClick={() => { saveFailed.current = false; void flushSave(); }} />}
       </div>
@@ -950,15 +999,26 @@ function TaskDetail({
       case "text":
       case "email":
       case "url":
-      case "phone":
-        return <input key={`${definition.id}-${typeof current === "string" ? current : ""}`} aria-label={definition.name} type={definition.type === "email" ? "email" : definition.type === "url" ? "url" : definition.type === "phone" ? "tel" : "text"} defaultValue={typeof current === "string" ? current : ""} disabled={!editable} onBlur={(event) => { const value = event.target.value; if (value !== (typeof current === "string" ? current : "")) void updateProperty(definition, value ? definition.type === "email" ? { type: "email", value } : definition.type === "url" ? { type: "url", value } : definition.type === "phone" ? { type: "phone", value } : { type: "text", value } : null); }} />;
+      case "phone": {
+        const propertyType = definition.type as "text" | "email" | "url" | "phone";
+        const inputType = { text: "text", email: "email", url: "url", phone: "tel" }[propertyType];
+        const currentText = typeof current === "string" ? current : "";
+        return <input key={`${definition.id}-${currentText}`} aria-label={definition.name} type={inputType} defaultValue={currentText} disabled={!editable} onBlur={(event) => {
+          const value = event.target.value;
+          if (value !== currentText) void updateProperty(definition, value ? stringPropertyValue(propertyType, value) : null);
+        }} />;
+      }
       default:
-        return <output className="unsupported-property">{current === undefined ? "Not set" : typeof current === "string" ? current : JSON.stringify(current)}</output>;
+        return <output className="unsupported-property">{propertyDisplayValue(current)}</output>;
     }
   }
 
+  let taskSaveStatus = "Task details";
+  if (saved) taskSaveStatus = `${saved} saved`;
+  if (savingId) taskSaveStatus = `Saving ${definitions.find((item) => item.id === savingId)?.name.toLowerCase()}…`;
+
   return <section className="task-detail" aria-label={`Task: ${node.title}`}>
-    <div className="page-detail-toolbar"><AppButton label="Back to items" variant="ghost" onClick={onClose} /><output className="document-save-state">{savingId ? `Saving ${definitions.find((item) => item.id === savingId)?.name.toLowerCase()}…` : saved ? `${saved} saved` : "Task details"}</output></div>
+    <div className="page-detail-toolbar"><AppButton label="Back to items" variant="ghost" onClick={onClose} /><output className="document-save-state">{taskSaveStatus}</output></div>
     <div className="task-heading"><div><div className="eyebrow">TASK</div><h1 className="document-title">{node.title}</h1></div>{editable && <AppButton label="＋ Add property" variant="ghost" size="sm" onClick={() => { setError(""); setPropertyDialogOpen(true); }} />}</div>
     {error && !propertyDialogOpen && <p className="notice" role="alert">{error}</p>}
     {loading ? <output className="loading document-loading">Loading task details…</output> : <div className="task-properties">{definitions.map((definition) => <label className="task-property" key={definition.id}><span>{definition.name}</span>{renderPropertyEditor(definition)}</label>)}{definitions.length === 0 && <p className="quiet-empty">No task properties are available in this workspace.</p>}</div>}

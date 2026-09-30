@@ -98,7 +98,7 @@ function PropertyEditorCell({
     case "email":
     case "url":
     case "phone": {
-      const inputType = definition.type === "email" ? "email" : definition.type === "url" ? "url" : "text";
+      const inputType = { text: "text", email: "email", url: "url", phone: "text" }[definition.type];
       return <input className="collection-property-input" aria-label={label} type={inputType} value={textDraft} disabled={disabled} onChange={(event) => setTextDraft(event.target.value)} onBlur={() => {
         if (textDraft !== textValue) onSave(textDraft ? { type: definition.type as "text" | "email" | "url" | "phone", value: textDraft } : null);
       }} />;
